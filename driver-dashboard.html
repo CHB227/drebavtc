@@ -13,6 +13,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
     
@@ -45,6 +46,82 @@
         .custom-marker {
             background: transparent;
             border: none;
+        }
+        
+        .map-container {
+            position: relative;
+            z-index: 1;
+        }
+        
+        .driver-map {
+            height: 400px;
+            width: 100%;
+            border-radius: 8px;
+            z-index: 1;
+        }
+        
+        /* S'assurer que la carte Leaflet reste derrière le menu */
+        .map-container .leaflet-container,
+        .map-container .leaflet-pane,
+        .map-container .leaflet-map-pane,
+        .map-container .leaflet-tile-pane,
+        .map-container .leaflet-overlay-pane,
+        .map-container .leaflet-shadow-pane,
+        .map-container .leaflet-marker-pane,
+        .map-container .leaflet-tooltip-pane,
+        .map-container .leaflet-popup-pane {
+            z-index: 1 !important;
+        }
+        
+        .photo-preview-hidden {
+            display: none;
+        }
+        
+        .photo-preview-visible {
+            display: block;
+        }
+        
+        .driver-marker-icon {
+            background: #10b981;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 18px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+            border: 3px solid white;
+        }
+        
+        .center-map-btn {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3), 0 0 0 3px rgba(255, 255, 255, 0.8);
+            border: 2px solid white;
+            z-index: 1000;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .center-map-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4), 0 0 0 3px rgba(255, 255, 255, 1);
+            background: linear-gradient(135deg, #059669 0%, #047857 100%);
+        }
+        
+        .center-map-btn:active {
+            transform: scale(0.95);
         }
     </style>
 </head>
@@ -138,7 +215,7 @@
             </div>
 
             <!-- Statistiques Rapides -->
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
                 <div class="bg-white rounded-lg shadow-lg p-6">
                     <div class="flex items-center justify-between">
                         <div>
@@ -164,11 +241,22 @@
                 <div class="bg-white rounded-lg shadow-lg p-6">
                     <div class="flex items-center justify-between">
                         <div>
-                            <div class="text-gray-600 text-sm">Gains totaux</div>
-                            <div class="text-2xl font-bold text-blue-600" id="totalEarnings">0 FCFA</div>
+                            <div class="text-gray-600 text-sm">Appels clients</div>
+                            <div class="text-2xl font-bold text-blue-600" id="clientCalls">0</div>
                         </div>
                         <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                            <i class="fas fa-money-bill-wave text-blue-600 text-xl"></i>
+                            <i class="fas fa-phone text-blue-600 text-xl"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-white rounded-lg shadow-lg p-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <div class="text-gray-600 text-sm">Appels admin</div>
+                            <div class="text-2xl font-bold text-purple-600" id="adminCalls">0</div>
+                        </div>
+                        <div class="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
+                            <i class="fas fa-user-shield text-purple-600 text-xl"></i>
                         </div>
                     </div>
                 </div>
@@ -188,7 +276,12 @@
             <!-- Carte -->
             <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
                 <h2 class="text-xl font-bold mb-4">Ma position</h2>
-                <div id="driverMap" style="height: 400px; width: 100%; border-radius: 8px;"></div>
+                <div class="map-container">
+                    <div id="driverMap" class="driver-map"></div>
+                    <button id="centerMapBtn" class="center-map-btn" title="Centrer sur ma position">
+                        <i class="fas fa-crosshairs text-xl"></i>
+                    </button>
+                </div>
             </div>
 
             <!-- Demandes de course en temps réel -->
@@ -220,7 +313,15 @@
         <!-- Section Historique -->
         <div id="historySection" class="section hidden">
             <div class="bg-white rounded-lg shadow-lg p-6">
-                <h2 class="text-xl font-bold mb-4">Historique des courses</h2>
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-xl font-bold">Historique des appels</h2>
+                    <select id="historyPeriod" class="px-4 py-2 border rounded-lg" title="Période de l'historique" aria-label="Période de l'historique">
+                        <option value="day">Aujourd'hui</option>
+                        <option value="week">Cette semaine</option>
+                        <option value="month">Ce mois</option>
+                        <option value="all">Tout</option>
+                    </select>
+                </div>
                 <div id="historyList" class="space-y-4">
                     <!-- L'historique sera ajouté ici -->
                 </div>
@@ -231,6 +332,12 @@
         <div id="statsSection" class="section hidden">
             <div class="bg-white rounded-lg shadow-lg p-6">
                 <h2 class="text-xl font-bold mb-4">Statistiques détaillées</h2>
+                <div class="mb-6">
+                    <h3 class="text-lg font-semibold mb-4">Clients fréquents</h3>
+                    <div id="frequentClients" class="space-y-3">
+                        <!-- Les clients fréquents seront ajoutés ici -->
+                    </div>
+                </div>
                 <div id="detailedStats" class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <!-- Les statistiques seront ajoutées ici -->
                 </div>
@@ -240,9 +347,91 @@
         <!-- Section Profil -->
         <div id="profileSection" class="section hidden">
             <div class="bg-white rounded-lg shadow-lg p-6">
-                <h2 class="text-xl font-bold mb-4">Mon profil</h2>
-                <div id="profileContent">
-                    <!-- Le profil sera chargé ici -->
+                <h2 class="text-xl font-bold mb-6">Mon profil</h2>
+                <div id="profileContent" class="space-y-6">
+                    <!-- Informations personnelles -->
+                    <div class="border-b pb-6">
+                        <h3 class="text-lg font-semibold mb-4">Informations personnelles</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium mb-2">Photo de profil</label>
+                                <div class="flex items-center space-x-4">
+                                    <img id="profilePhotoPreview" src="" alt="Photo de profil" class="w-24 h-24 rounded-full object-cover border-2 border-gray-300 photo-preview-hidden">
+                                    <div>
+                                        <input type="file" id="profilePhotoInput" accept="image/*" class="hidden" title="Choisir une photo de profil" aria-label="Choisir une photo de profil">
+                                        <button onclick="document.getElementById('profilePhotoInput').click()" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition">
+                                            <i class="fas fa-upload mr-2"></i>Choisir une photo
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-2">Prénom</label>
+                                <input type="text" id="editFirstName" class="w-full px-4 py-2 border rounded-lg" placeholder="Prénom">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-2">Nom</label>
+                                <input type="text" id="editLastName" class="w-full px-4 py-2 border rounded-lg" placeholder="Nom">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-2">Email</label>
+                                <input type="email" id="editEmail" class="w-full px-4 py-2 border rounded-lg" placeholder="Email">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-2">Numéro de téléphone</label>
+                                <input type="tel" id="editPhone" class="w-full px-4 py-2 border rounded-lg" placeholder="Numéro">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-2">Permis de conduire</label>
+                                <input type="text" id="editLicense" class="w-full px-4 py-2 border rounded-lg" placeholder="Numéro de permis">
+                            </div>
+                        </div>
+                        <button onclick="savePersonalInfo()" class="mt-4 px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-semibold">
+                            <i class="fas fa-save mr-2"></i>Enregistrer les modifications
+                        </button>
+                    </div>
+
+                    <!-- Informations véhicule -->
+                    <div>
+                        <h3 class="text-lg font-semibold mb-4">Informations véhicule</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium mb-2">Photo du véhicule</label>
+                                <div class="flex items-center space-x-4">
+                                    <img id="vehiclePhotoPreview" src="" alt="Photo du véhicule" class="w-32 h-32 rounded-lg object-cover border-2 border-gray-300 photo-preview-hidden">
+                                    <div>
+                                        <input type="file" id="vehiclePhotoInput" accept="image/*" class="hidden" title="Choisir une photo du véhicule" aria-label="Choisir une photo du véhicule">
+                                        <button onclick="document.getElementById('vehiclePhotoInput').click()" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition">
+                                            <i class="fas fa-upload mr-2"></i>Choisir une photo
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-2">Plaque d'immatriculation</label>
+                                <input type="text" id="editPlate" class="w-full px-4 py-2 border rounded-lg" placeholder="Plaque">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-2">Marque du véhicule</label>
+                                <input type="text" id="editVehicleBrand" class="w-full px-4 py-2 border rounded-lg" placeholder="Marque">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-2">Couleur du véhicule</label>
+                                <input type="text" id="editVehicleColor" class="w-full px-4 py-2 border rounded-lg" placeholder="Couleur">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-2">Type de service</label>
+                                <select id="editServiceType" class="w-full px-4 py-2 border rounded-lg" title="Type de service" aria-label="Type de service">
+                                    <option value="SIMPLE">Taxi Simple</option>
+                                    <option value="STANDARD">Taxi Standard</option>
+                                    <option value="VIP">Taxi VIP</option>
+                                </select>
+                            </div>
+                        </div>
+                        <button onclick="saveVehicleInfo()" class="mt-4 px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-semibold">
+                            <i class="fas fa-save mr-2"></i>Enregistrer les modifications
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -250,9 +439,36 @@
         <!-- Section Paramètres -->
         <div id="settingsSection" class="section hidden">
             <div class="bg-white rounded-lg shadow-lg p-6">
-                <h2 class="text-xl font-bold mb-4">Paramètres</h2>
-                <div id="settingsContent">
-                    <!-- Les paramètres seront ajoutés ici -->
+                <h2 class="text-xl font-bold mb-6">Paramètres</h2>
+                <div id="settingsContent" class="space-y-6">
+                    <!-- Thème de couleur -->
+                    <div class="border-b pb-6">
+                        <h3 class="text-lg font-semibold mb-4">Thème de l'interface</h3>
+                        <div class="flex items-center space-x-4">
+                            <label class="block text-sm font-medium">Couleur principale :</label>
+                            <input type="color" id="themeColor" value="#10b981" class="w-16 h-10 border rounded-lg cursor-pointer" title="Couleur du thème" aria-label="Couleur du thème">
+                            <button onclick="applyThemeColor()" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition">
+                                <i class="fas fa-palette mr-2"></i>Appliquer
+                            </button>
+                            <button onclick="resetThemeColor()" class="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition">
+                                <i class="fas fa-undo mr-2"></i>Réinitialiser
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Supprimer le compte -->
+                    <div class="border-t pt-6">
+                        <h3 class="text-lg font-semibold mb-4 text-red-600">Zone de danger</h3>
+                        <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+                            <p class="text-sm text-red-800 mb-4">
+                                <i class="fas fa-exclamation-triangle mr-2"></i>
+                                La suppression de votre compte est définitive. Toutes vos données seront perdues.
+                            </p>
+                            <button onclick="deleteAccount()" class="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-semibold">
+                                <i class="fas fa-trash mr-2"></i>Supprimer mon compte
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -273,6 +489,7 @@
         // Initialiser Firebase
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
+        const storage = firebase.storage();
 
         // Variables globales
         let currentDriverId = null;
@@ -346,7 +563,7 @@
             // Ajouter le marqueur du chauffeur
             const driverIcon = L.divIcon({
                 className: 'custom-marker',
-                html: `<div style="background: #10b981; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 18px; box-shadow: 0 2px 8px rgba(0,0,0,0.3); border: 3px solid white;">
+                html: `<div class="driver-marker-icon">
                     <i class="fas fa-taxi"></i>
                 </div>`,
                 iconSize: [40, 40],
@@ -356,6 +573,38 @@
             driverMarker = L.marker([defaultLat, defaultLng], { icon: driverIcon })
                 .addTo(driverMap)
                 .bindPopup(`<strong>${driverData.firstName} ${driverData.lastName}</strong><br>Votre position`);
+
+            // Ajouter le bouton "Ma position"
+            setupCenterMapButton();
+        }
+
+        // Configurer le bouton "Ma position"
+        function setupCenterMapButton() {
+            const centerBtn = document.getElementById('centerMapBtn');
+            if (centerBtn) {
+                centerBtn.addEventListener('click', function() {
+                    centerMapOnDriver();
+                });
+            }
+        }
+
+        // Centrer la carte sur la position du chauffeur
+        function centerMapOnDriver() {
+            if (!driverMap || !driverMarker) {
+                return;
+            }
+
+            // Obtenir la position actuelle du marqueur
+            const position = driverMarker.getLatLng();
+            
+            // Centrer la carte sur cette position avec un zoom approprié
+            driverMap.setView(position, 16, {
+                animate: true,
+                duration: 0.5
+            });
+
+            // Ouvrir le popup du marqueur
+            driverMarker.openPopup();
         }
 
         // Démarrer le suivi de localisation
@@ -476,12 +725,60 @@
 
                 document.getElementById('acceptedRides').textContent = acceptedSnapshot.size;
                 document.getElementById('rejectedRides').textContent = rejectedSnapshot.size;
-                
-                // Calculer les gains (à adapter selon votre structure)
-                // Pour l'instant, on met 0
-                document.getElementById('totalEarnings').textContent = '0 FCFA';
+
+                // Compter les appels reçus
+                await loadCallStats();
             } catch (error) {
                 console.error('Erreur chargement stats:', error);
+            }
+        }
+
+        // Charger les statistiques d'appels
+        async function loadCallStats() {
+            try {
+                if (!driverData || !driverData.phone) {
+                    document.getElementById('clientCalls').textContent = '0';
+                    document.getElementById('adminCalls').textContent = '0';
+                    return;
+                }
+
+                const driverPhone = driverData.phone.toString();
+                
+                // Récupérer tous les appels
+                const allCallsSnapshot = await db.collection('calls').get();
+                
+                let clientCallsCount = 0;
+                let adminCallsCount = 0;
+
+                allCallsSnapshot.forEach((doc) => {
+                    const callData = doc.data();
+                    const callPhone = callData.phoneNumber ? callData.phoneNumber.toString().replace('+227', '').replace('227', '') : '';
+                    
+                    // Vérifier si l'appel est pour ce chauffeur
+                    if (callPhone === driverPhone) {
+                        const callType = callData.callType || '';
+                        
+                        // Appels des clients (depuis la carte/recherche)
+                        if (callType === 'reservation' || callType === 'client' || callType === 'booking') {
+                            clientCallsCount++;
+                        }
+                        // Appels de l'admin
+                        else if (callType === 'admin' || callType === 'management') {
+                            adminCallsCount++;
+                        }
+                        // Par défaut, si pas de type spécifié, considérer comme appel client
+                        else if (!callType || callType === '') {
+                            clientCallsCount++;
+                        }
+                    }
+                });
+
+                document.getElementById('clientCalls').textContent = clientCallsCount;
+                document.getElementById('adminCalls').textContent = adminCallsCount;
+            } catch (error) {
+                console.error('Erreur chargement stats appels:', error);
+                document.getElementById('clientCalls').textContent = '0';
+                document.getElementById('adminCalls').textContent = '0';
             }
         }
 
@@ -617,6 +914,17 @@
                 section.classList.add('hidden');
             });
             document.getElementById(sectionName + 'Section').classList.remove('hidden');
+            
+            // Charger les données selon la section
+            if (sectionName === 'profile') {
+                loadProfileData();
+            } else if (sectionName === 'history') {
+                loadCallHistory();
+            } else if (sectionName === 'stats') {
+                loadFrequentClients();
+            } else if (sectionName === 'settings') {
+                loadThemeColor();
+            }
         }
 
         // Déconnexion
@@ -626,27 +934,640 @@
             }
 
             try {
-                // Mettre le chauffeur hors ligne
+                // Enregistrer la date de dernière déconnexion (sans changer isOnline)
+                // Le statut isOnline ne change que via le bouton "Se mettre hors ligne"
                 await db.collection('drivers').doc(currentDriverId).update({
-                    isOnline: false,
                     lastLogout: firebase.firestore.FieldValue.serverTimestamp()
                 });
 
+                // Arrêter le suivi de localisation
                 stopLocationTracking();
+                
+                // Arrêter l'écoute des demandes de course
                 if (rideRequestsListener) {
                     rideRequestsListener();
                 }
 
+                // Rediriger vers la page principale
                 window.location.href = 'Dréba VTC.html';
             } catch (error) {
                 console.error('Erreur déconnexion:', error);
+                // Rediriger quand même même en cas d'erreur
                 window.location.href = 'Dréba VTC.html';
             }
         });
 
+        // ============================================
+        // Gestion du Profil
+        // ============================================
+        
+        // Charger les données du profil
+        function loadProfileData() {
+            if (!driverData) return;
+            
+            document.getElementById('editFirstName').value = driverData.firstName || '';
+            document.getElementById('editLastName').value = driverData.lastName || '';
+            document.getElementById('editEmail').value = driverData.email || '';
+            document.getElementById('editPhone').value = driverData.phone || '';
+            document.getElementById('editLicense').value = driverData.license || '';
+            document.getElementById('editPlate').value = driverData.plate || '';
+            document.getElementById('editVehicleBrand').value = driverData.vehicleBrand || '';
+            document.getElementById('editVehicleColor').value = driverData.vehicleColor || '';
+            document.getElementById('editServiceType').value = driverData.serviceType || 'SIMPLE';
+            
+            // Afficher les photos si disponibles
+            if (driverData.profilePhoto) {
+                const profilePreview = document.getElementById('profilePhotoPreview');
+                profilePreview.src = driverData.profilePhoto;
+                profilePreview.classList.remove('photo-preview-hidden');
+                profilePreview.classList.add('photo-preview-visible');
+            }
+            if (driverData.vehiclePhoto) {
+                const vehiclePreview = document.getElementById('vehiclePhotoPreview');
+                vehiclePreview.src = driverData.vehiclePhoto;
+                vehiclePreview.classList.remove('photo-preview-hidden');
+                vehiclePreview.classList.add('photo-preview-visible');
+            }
+        }
+
+        // Upload photo de profil
+        document.getElementById('profilePhotoInput').addEventListener('change', async function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            // Vérifications préalables
+            if (!currentDriverId) {
+                alert('Erreur: Session expirée. Veuillez vous reconnecter.');
+                return;
+            }
+            
+            if (!storage) {
+                alert('Erreur: Firebase Storage n\'est pas initialisé.');
+                console.error('❌ Firebase Storage non initialisé');
+                return;
+            }
+            
+            // Vérifier le type de fichier
+            if (!file.type.startsWith('image/')) {
+                alert('Veuillez sélectionner un fichier image.');
+                return;
+            }
+            
+            // Vérifier la taille (max 5MB)
+            if (file.size > 5 * 1024 * 1024) {
+                alert('L\'image est trop grande. Taille maximale: 5MB');
+                return;
+            }
+            
+            // Afficher un aperçu immédiat de l'image sélectionnée
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const preview = document.getElementById('profilePhotoPreview');
+                preview.src = e.target.result;
+                preview.classList.remove('photo-preview-hidden');
+                preview.classList.add('photo-preview-visible');
+            };
+            reader.readAsDataURL(file);
+            
+            // Trouver le bouton d'upload pour afficher le statut
+            const uploadBtn = document.querySelector('button[onclick*="profilePhotoInput"]');
+            const originalBtnText = uploadBtn ? uploadBtn.innerHTML : '';
+            if (uploadBtn) {
+                uploadBtn.disabled = true;
+                uploadBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Upload en cours...';
+            }
+            
+            try {
+                // Vérifier que storage est bien initialisé
+                if (!storage || typeof storage.ref !== 'function') {
+                    throw new Error('Firebase Storage n\'est pas correctement initialisé. Vérifiez que Storage est activé dans Firebase Console.');
+                }
+                
+                console.log('📤 Début upload photo de profil...', { 
+                    driverId: currentDriverId, 
+                    fileName: file.name,
+                    fileSize: (file.size / 1024).toFixed(2) + ' KB',
+                    fileType: file.type,
+                    storageInitialized: !!storage
+                });
+                
+                const storageRef = storage.ref(`drivers/${currentDriverId}/profile.jpg`);
+                const uploadTask = storageRef.put(file);
+                
+                // Écouter la progression de l'upload
+                uploadTask.on('state_changed', 
+                    (snapshot) => {
+                        const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                        console.log('📤 Progression upload:', Math.round(progress) + '%');
+                        if (uploadBtn) {
+                            uploadBtn.innerHTML = `<i class="fas fa-spinner fa-spin mr-2"></i>Upload ${Math.round(progress)}%...`;
+                        }
+                    },
+                    (error) => {
+                        console.error('❌ Erreur upload:', error);
+                        console.error('Détails erreur:', {
+                            code: error.code,
+                            message: error.message
+                        });
+                        
+                        let errorMessage = 'Erreur lors de l\'upload de la photo.';
+                        let errorDetails = '';
+                        
+                        if (error.code === 'storage/unauthorized') {
+                            errorMessage = 'Erreur: Permissions insuffisantes.';
+                            errorDetails = 'Vérifiez les règles Firebase Storage dans la console Firebase. Allez dans Storage → Règles et copiez les règles depuis le fichier "Rules fire base.txt".';
+                        } else if (error.code === 'storage/quota-exceeded') {
+                            errorMessage = 'Erreur: Quota de stockage dépassé.';
+                            errorDetails = 'Vérifiez votre plan Firebase ou supprimez des fichiers anciens.';
+                        } else if (error.code === 'storage/object-not-found') {
+                            errorMessage = 'Erreur: Fichier non trouvé.';
+                            errorDetails = 'C\'est normal lors de la première upload. Réessayez.';
+                        } else if (error.code === 'storage/canceled') {
+                            errorMessage = 'Upload annulé.';
+                            errorDetails = 'L\'upload a été annulé. Réessayez.';
+                        } else if (error.message && error.message.includes('not initialized')) {
+                            errorMessage = 'Firebase Storage n\'est pas initialisé.';
+                            errorDetails = 'Vérifiez que Storage est activé dans Firebase Console (Storage → Commencer).';
+                        } else {
+                            errorMessage = 'Erreur: ' + (error.message || 'Erreur inconnue');
+                            errorDetails = 'Code erreur: ' + (error.code || 'N/A') + '. Ouvrez la console (F12) pour plus de détails.';
+                        }
+                        
+                        alert(errorMessage + '\n\n' + errorDetails);
+                        if (uploadBtn) {
+                            uploadBtn.disabled = false;
+                            uploadBtn.innerHTML = originalBtnText;
+                        }
+                    },
+                    async () => {
+                        // Upload réussi
+                        try {
+                            const url = await storageRef.getDownloadURL();
+                            console.log('✅ URL photo obtenue:', url);
+                            
+                            await db.collection('drivers').doc(currentDriverId).update({
+                                profilePhoto: url,
+                                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                            });
+                            
+                            console.log('✅ Photo sauvegardée dans Firestore');
+                            
+                            // Mettre à jour l'aperçu avec l'URL Firebase
+                            const profilePreview = document.getElementById('profilePhotoPreview');
+                            profilePreview.src = url;
+                            profilePreview.classList.remove('photo-preview-hidden');
+                            profilePreview.classList.add('photo-preview-visible');
+                            driverData.profilePhoto = url;
+                            
+                            alert('Photo de profil mise à jour avec succès !');
+                        } catch (error) {
+                            console.error('❌ Erreur mise à jour Firestore:', error);
+                            alert('Erreur lors de la sauvegarde: ' + error.message);
+                        } finally {
+                            if (uploadBtn) {
+                                uploadBtn.disabled = false;
+                                uploadBtn.innerHTML = originalBtnText;
+                            }
+                        }
+                    }
+                );
+            } catch (error) {
+                console.error('❌ Erreur upload photo:', error);
+                alert('Erreur lors de l\'upload de la photo: ' + error.message);
+                if (uploadBtn) {
+                    uploadBtn.disabled = false;
+                    uploadBtn.innerHTML = originalBtnText;
+                }
+            }
+        });
+
+        // Upload photo du véhicule
+        document.getElementById('vehiclePhotoInput').addEventListener('change', async function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            // Vérifications préalables
+            if (!currentDriverId) {
+                alert('Erreur: Session expirée. Veuillez vous reconnecter.');
+                return;
+            }
+            
+            if (!storage) {
+                alert('Erreur: Firebase Storage n\'est pas initialisé.');
+                console.error('❌ Firebase Storage non initialisé');
+                return;
+            }
+            
+            // Vérifier le type de fichier
+            if (!file.type.startsWith('image/')) {
+                alert('Veuillez sélectionner un fichier image.');
+                return;
+            }
+            
+            // Vérifier la taille (max 5MB)
+            if (file.size > 5 * 1024 * 1024) {
+                alert('L\'image est trop grande. Taille maximale: 5MB');
+                return;
+            }
+            
+            // Afficher un aperçu immédiat de l'image sélectionnée
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const preview = document.getElementById('vehiclePhotoPreview');
+                preview.src = e.target.result;
+                preview.classList.remove('photo-preview-hidden');
+                preview.classList.add('photo-preview-visible');
+            };
+            reader.readAsDataURL(file);
+            
+            // Trouver le bouton d'upload pour afficher le statut
+            const uploadBtn = document.querySelector('button[onclick*="vehiclePhotoInput"]');
+            const originalBtnText = uploadBtn ? uploadBtn.innerHTML : '';
+            if (uploadBtn) {
+                uploadBtn.disabled = true;
+                uploadBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Upload en cours...';
+            }
+            
+            try {
+                console.log('📤 Début upload photo véhicule...', { 
+                    driverId: currentDriverId, 
+                    fileName: file.name,
+                    fileSize: (file.size / 1024).toFixed(2) + ' KB',
+                    fileType: file.type
+                });
+                
+                const storageRef = storage.ref(`drivers/${currentDriverId}/vehicle.jpg`);
+                const uploadTask = storageRef.put(file);
+                
+                // Écouter la progression de l'upload
+                uploadTask.on('state_changed',
+                    (snapshot) => {
+                        const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                        console.log('📤 Progression upload:', Math.round(progress) + '%');
+                        if (uploadBtn) {
+                            uploadBtn.innerHTML = `<i class="fas fa-spinner fa-spin mr-2"></i>Upload ${Math.round(progress)}%...`;
+                        }
+                    },
+                    (error) => {
+                        console.error('❌ Erreur upload:', error);
+                        console.error('Détails erreur:', {
+                            code: error.code,
+                            message: error.message
+                        });
+                        
+                        let errorMessage = 'Erreur lors de l\'upload de la photo.';
+                        let errorDetails = '';
+                        
+                        if (error.code === 'storage/unauthorized') {
+                            errorMessage = 'Erreur: Permissions insuffisantes.';
+                            errorDetails = 'Vérifiez les règles Firebase Storage dans la console Firebase. Allez dans Storage → Règles et copiez les règles depuis le fichier "Rules fire base.txt".';
+                        } else if (error.code === 'storage/quota-exceeded') {
+                            errorMessage = 'Erreur: Quota de stockage dépassé.';
+                            errorDetails = 'Vérifiez votre plan Firebase ou supprimez des fichiers anciens.';
+                        } else if (error.code === 'storage/object-not-found') {
+                            errorMessage = 'Erreur: Fichier non trouvé.';
+                            errorDetails = 'C\'est normal lors de la première upload. Réessayez.';
+                        } else if (error.code === 'storage/canceled') {
+                            errorMessage = 'Upload annulé.';
+                            errorDetails = 'L\'upload a été annulé. Réessayez.';
+                        } else if (error.message && error.message.includes('not initialized')) {
+                            errorMessage = 'Firebase Storage n\'est pas initialisé.';
+                            errorDetails = 'Vérifiez que Storage est activé dans Firebase Console (Storage → Commencer).';
+                        } else {
+                            errorMessage = 'Erreur: ' + (error.message || 'Erreur inconnue');
+                            errorDetails = 'Code erreur: ' + (error.code || 'N/A') + '. Ouvrez la console (F12) pour plus de détails.';
+                        }
+                        
+                        alert(errorMessage + '\n\n' + errorDetails);
+                        if (uploadBtn) {
+                            uploadBtn.disabled = false;
+                            uploadBtn.innerHTML = originalBtnText;
+                        }
+                    },
+                    async () => {
+                        // Upload réussi
+                        try {
+                            const url = await storageRef.getDownloadURL();
+                            console.log('✅ URL photo obtenue:', url);
+                            
+                            await db.collection('drivers').doc(currentDriverId).update({
+                                vehiclePhoto: url,
+                                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                            });
+                            
+                            console.log('✅ Photo sauvegardée dans Firestore');
+                            
+                            // Mettre à jour l'aperçu avec l'URL Firebase
+                            const vehiclePreview = document.getElementById('vehiclePhotoPreview');
+                            vehiclePreview.src = url;
+                            vehiclePreview.classList.remove('photo-preview-hidden');
+                            vehiclePreview.classList.add('photo-preview-visible');
+                            driverData.vehiclePhoto = url;
+                            
+                            alert('Photo du véhicule mise à jour avec succès !');
+                        } catch (error) {
+                            console.error('❌ Erreur mise à jour Firestore:', error);
+                            alert('Erreur lors de la sauvegarde: ' + error.message);
+                        } finally {
+                            if (uploadBtn) {
+                                uploadBtn.disabled = false;
+                                uploadBtn.innerHTML = originalBtnText;
+                            }
+                        }
+                    }
+                );
+            } catch (error) {
+                console.error('❌ Erreur upload photo:', error);
+                alert('Erreur lors de l\'upload de la photo: ' + error.message);
+                if (uploadBtn) {
+                    uploadBtn.disabled = false;
+                    uploadBtn.innerHTML = originalBtnText;
+                }
+            }
+        });
+
+        // Sauvegarder les informations personnelles
+        window.savePersonalInfo = async function() {
+            try {
+                const updates = {
+                    firstName: document.getElementById('editFirstName').value.trim(),
+                    lastName: document.getElementById('editLastName').value.trim(),
+                    email: document.getElementById('editEmail').value.trim(),
+                    phone: document.getElementById('editPhone').value.trim(),
+                    license: document.getElementById('editLicense').value.trim(),
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                };
+                
+                await db.collection('drivers').doc(currentDriverId).update(updates);
+                
+                // Mettre à jour les données locales
+                Object.assign(driverData, updates);
+                displayDriverInfo();
+                
+                alert('Informations personnelles mises à jour avec succès !');
+            } catch (error) {
+                console.error('Erreur sauvegarde:', error);
+                alert('Erreur lors de la sauvegarde.');
+            }
+        };
+
+        // Sauvegarder les informations du véhicule
+        window.saveVehicleInfo = async function() {
+            try {
+                const updates = {
+                    plate: document.getElementById('editPlate').value.trim(),
+                    vehicleBrand: document.getElementById('editVehicleBrand').value.trim(),
+                    vehicleColor: document.getElementById('editVehicleColor').value.trim(),
+                    serviceType: document.getElementById('editServiceType').value,
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                };
+                
+                await db.collection('drivers').doc(currentDriverId).update(updates);
+                
+                // Mettre à jour les données locales
+                Object.assign(driverData, updates);
+                
+                alert('Informations du véhicule mises à jour avec succès !');
+            } catch (error) {
+                console.error('Erreur sauvegarde:', error);
+                alert('Erreur lors de la sauvegarde.');
+            }
+        };
+
+        // ============================================
+        // Gestion de l'Historique
+        // ============================================
+        
+        // Charger l'historique des appels
+        async function loadCallHistory() {
+            try {
+                const period = document.getElementById('historyPeriod').value;
+                const historyList = document.getElementById('historyList');
+                historyList.innerHTML = '<div class="text-center py-4"><i class="fas fa-spinner fa-spin text-2xl"></i></div>';
+                
+                if (!driverData || !driverData.phone) {
+                    historyList.innerHTML = '<p class="text-center text-gray-500">Aucun historique disponible</p>';
+                    return;
+                }
+                
+                const driverPhone = driverData.phone.toString();
+                const now = new Date();
+                let startDate = new Date(0);
+                
+                if (period === 'day') {
+                    startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                } else if (period === 'week') {
+                    startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+                } else if (period === 'month') {
+                    startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+                }
+                
+                const allCallsSnapshot = await db.collection('calls').get();
+                
+                const calls = [];
+                allCallsSnapshot.forEach((doc) => {
+                    const callData = doc.data();
+                    const callPhone = callData.phoneNumber ? callData.phoneNumber.toString().replace('+227', '').replace('227', '') : '';
+                    
+                    if (callPhone === driverPhone) {
+                        const callDate = callData.timestamp ? callData.timestamp.toDate() : new Date(callData.date);
+                        if (period === 'all' || callDate >= startDate) {
+                            calls.push({
+                                id: doc.id,
+                                ...callData,
+                                callDate: callDate
+                            });
+                        }
+                    }
+                });
+                
+                if (calls.length === 0) {
+                    historyList.innerHTML = '<p class="text-center text-gray-500 py-8">Aucun appel pour cette période</p>';
+                    return;
+                }
+                
+                historyList.innerHTML = calls.map(call => {
+                    const dateStr = call.callDate.toLocaleString('fr-FR');
+                    const callType = call.callType === 'admin' ? 'Admin' : 'Client';
+                    const isAdmin = call.callType === 'admin';
+                    const bgColor = isAdmin ? 'bg-purple-100' : 'bg-blue-100';
+                    const textColor = isAdmin ? 'text-purple-600' : 'text-blue-600';
+                    const location = call.location ? `${call.location.lat.toFixed(4)}, ${call.location.lng.toFixed(4)}` : 'Non disponible';
+                    
+                    return `
+                        <div class="border rounded-lg p-4 hover:bg-gray-50 transition">
+                            <div class="flex items-center justify-between mb-2">
+                                <div class="flex items-center space-x-3">
+                                    <div class="w-10 h-10 ${bgColor} rounded-full flex items-center justify-center">
+                                        <i class="fas fa-phone ${textColor}"></i>
+                                    </div>
+                                    <div>
+                                        <div class="font-semibold">Appel ${callType}</div>
+                                        <div class="text-sm text-gray-600">${dateStr}</div>
+                                    </div>
+                                </div>
+                                <span class="px-3 py-1 ${bgColor} ${textColor} rounded-full text-sm font-semibold">
+                                    ${callType}
+                                </span>
+                            </div>
+                            <div class="mt-2 text-sm text-gray-600">
+                                <div><i class="fas fa-map-marker-alt mr-2"></i>Localisation: ${location}</div>
+                                ${call.source ? `<div><i class="fas fa-info-circle mr-2"></i>Source: ${call.source}</div>` : ''}
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            } catch (error) {
+                console.error('Erreur chargement historique:', error);
+                document.getElementById('historyList').innerHTML = '<p class="text-center text-red-500">Erreur lors du chargement</p>';
+            }
+        }
+
+        // Écouter les changements de période
+        document.getElementById('historyPeriod').addEventListener('change', loadCallHistory);
+
+        // ============================================
+        // Gestion des Statistiques - Clients fréquents
+        // ============================================
+        
+        // Charger les clients fréquents
+        async function loadFrequentClients() {
+            try {
+                const frequentClientsDiv = document.getElementById('frequentClients');
+                frequentClientsDiv.innerHTML = '<div class="text-center py-4"><i class="fas fa-spinner fa-spin text-2xl"></i></div>';
+                
+                if (!driverData || !driverData.phone) {
+                    frequentClientsDiv.innerHTML = '<p class="text-center text-gray-500">Aucune donnée disponible</p>';
+                    return;
+                }
+                
+                const driverPhone = driverData.phone.toString();
+                const allCallsSnapshot = await db.collection('calls').get();
+                
+                const clientCounts = {};
+                
+                allCallsSnapshot.forEach((doc) => {
+                    const callData = doc.data();
+                    const callPhone = callData.phoneNumber ? callData.phoneNumber.toString().replace('+227', '').replace('227', '') : '';
+                    
+                    if (callPhone === driverPhone && callData.callType !== 'admin') {
+                        const clientPhone = callData.clientPhone || callData.fromPhone || 'Inconnu';
+                        clientCounts[clientPhone] = (clientCounts[clientPhone] || 0) + 1;
+                    }
+                });
+                
+                const sortedClients = Object.entries(clientCounts)
+                    .sort((a, b) => b[1] - a[1])
+                    .slice(0, 10);
+                
+                if (sortedClients.length === 0) {
+                    frequentClientsDiv.innerHTML = '<p class="text-center text-gray-500 py-4">Aucun client fréquent pour le moment</p>';
+                    return;
+                }
+                
+                frequentClientsDiv.innerHTML = sortedClients.map(([phone, count], index) => `
+                    <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center font-bold text-green-600">
+                                ${index + 1}
+                            </div>
+                            <div>
+                                <div class="font-semibold">+227${phone}</div>
+                                <div class="text-sm text-gray-600">${count} appel${count > 1 ? 's' : ''}</div>
+                            </div>
+                        </div>
+                        <button onclick="callClient('${phone}')" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition">
+                            <i class="fas fa-phone mr-2"></i>Appeler
+                        </button>
+                    </div>
+                `).join('');
+            } catch (error) {
+                console.error('Erreur chargement clients fréquents:', error);
+                document.getElementById('frequentClients').innerHTML = '<p class="text-center text-red-500">Erreur lors du chargement</p>';
+            }
+        }
+
+        // Appeler un client
+        window.callClient = function(phone) {
+            window.location.href = `tel:+227${phone}`;
+        };
+
+        // ============================================
+        // Gestion des Paramètres
+        // ============================================
+        
+        // Appliquer la couleur du thème
+        window.applyThemeColor = function() {
+            const color = document.getElementById('themeColor').value;
+            localStorage.setItem('driverThemeColor', color);
+            
+            // Appliquer la couleur aux éléments principaux
+            document.documentElement.style.setProperty('--theme-color', color);
+            const nav = document.querySelector('nav');
+            if (nav) {
+                nav.style.background = `linear-gradient(to right, ${color}, ${adjustColor(color, -20)})`;
+            }
+            
+            alert('Couleur du thème appliquée !');
+        };
+
+        // Réinitialiser la couleur du thème
+        window.resetThemeColor = function() {
+            localStorage.removeItem('driverThemeColor');
+            document.getElementById('themeColor').value = '#10b981';
+            document.documentElement.style.setProperty('--theme-color', '#10b981');
+            location.reload();
+        };
+
+        // Charger la couleur du thème sauvegardée
+        function loadThemeColor() {
+            const savedColor = localStorage.getItem('driverThemeColor');
+            if (savedColor) {
+                document.getElementById('themeColor').value = savedColor;
+                applyThemeColor();
+            }
+        }
+
+        // Fonction utilitaire pour ajuster la couleur
+        function adjustColor(color, amount) {
+            const num = parseInt(color.replace("#", ""), 16);
+            const r = Math.max(0, Math.min(255, (num >> 16) + amount));
+            const g = Math.max(0, Math.min(255, ((num >> 8) & 0x00FF) + amount));
+            const b = Math.max(0, Math.min(255, (num & 0x0000FF) + amount));
+            return "#" + ((r << 16) | (g << 8) | b).toString(16).padStart(6, '0');
+        }
+
+        // Supprimer le compte
+        window.deleteAccount = async function() {
+            if (!confirm('Êtes-vous sûr de vouloir supprimer votre compte ? Cette action est irréversible.')) {
+                return;
+            }
+            
+            const confirmation = prompt('Tapez "SUPPRIMER" pour confirmer la suppression de votre compte :');
+            if (confirmation !== 'SUPPRIMER') {
+                alert('Suppression annulée.');
+                return;
+            }
+            
+            try {
+                await db.collection('drivers').doc(currentDriverId).update({
+                    isOnline: false,
+                    status: 'deleted',
+                    deletedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                
+                alert('Votre compte a été supprimé. Vous allez être redirigé.');
+                window.location.href = 'Dréba VTC.html';
+            } catch (error) {
+                console.error('Erreur suppression compte:', error);
+                alert('Erreur lors de la suppression du compte.');
+            }
+        };
+
         // Initialisation au chargement
         window.addEventListener('load', function() {
             checkDriverSession();
+            loadThemeColor();
         });
     </script>
 </body>

@@ -1,0 +1,53 @@
+{
+  "name": "Dréba VTC - Réserver un taxi en un clic",
+  "short_name": "Dréba VTC",
+  "description": "Pionnier de la révolution de la mobilité au Niger. Réservez un taxi en quelques clics, où que vous soyez.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#10b981",
+  "theme_color": "#10b981",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "Icon/Logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "Icon/Logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["transport", "travel"],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "Réserver un taxi",
+      "short_name": "Réserver",
+      "description": "Réserver rapidement un taxi",
+      "url": "/#booking",
+      "icons": [
+        {
+          "src": "Icon/Logo.png",
+          "sizes": "96x96"
+        }
+      ]
+    },
+    {
+      "name": "Devenir chauffeur",
+      "short_name": "Chauffeur",
+      "description": "Rejoindre l'équipe Dréba VTC",
+      "url": "/#rental",
+      "icons": [
+        {
+          "src": "Icon/Logo.png",
+          "sizes": "96x96"
+        }
+      ]
+    }
+  ]
+}
+

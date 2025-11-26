@@ -4,6 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dréba VTC - Réserver en un clic une course</title>
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#10b981">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Dréba VTC">
+    <link rel="apple-touch-icon" href="Icon/Logo.png">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -174,6 +181,34 @@
         
         .vtc-wave {
             animation: vtc-wave 4s ease-in-out infinite;
+        }
+        
+        /* Animation pour le bouton PWA */
+        @keyframes pwa-bounce {
+            0%, 100% {
+                transform: translateY(0) scale(1);
+            }
+            50% {
+                transform: translateY(-10px) scale(1.05);
+            }
+        }
+        
+        @keyframes pwa-pulse-glow {
+            0%, 100% {
+                box-shadow: 0 0 20px rgba(16, 185, 129, 0.5);
+            }
+            50% {
+                box-shadow: 0 0 30px rgba(16, 185, 129, 0.8), 0 0 40px rgba(16, 185, 129, 0.4);
+            }
+        }
+        
+        #pwaInstallButton {
+            animation: pwa-bounce 2s infinite, pwa-pulse-glow 2s infinite;
+        }
+        
+        #pwaInstallButton:hover {
+            animation: none;
+            box-shadow: 0 0 40px rgba(16, 185, 129, 1), 0 0 60px rgba(16, 185, 129, 0.6);
         }
         
         /* Styles pour la vidéo hero */
@@ -949,7 +984,7 @@
                     <a href="#services" class="px-3 py-2 text-white hover:bg-green-700 rounded transition vtc-drive">Services</a>
                     <a href="#booking" class="px-3 py-2 text-white hover:bg-green-700 rounded transition vtc-drive">Réserver</a>
                     <a href="#pricing" class="px-3 py-2 text-white hover:bg-green-700 rounded transition vtc-drive">Véhicules</a>
-                    <a href="#rental" class="px-3 py-2 text-white hover:bg-green-700 rounded transition vtc-drive">Location</a>
+                    <a href="#rental" class="px-3 py-2 text-white hover:bg-green-700 rounded transition vtc-drive">Devenir Chauffeur</a>
                     <button id="driverLoginBtnMobile" class="px-3 py-2 text-white hover:bg-green-700 rounded transition vtc-drive text-left w-full">Connexion Chauffeur</button>
                     <a href="#about" class="px-3 py-2 text-white hover:bg-green-700 rounded transition vtc-drive">À propos</a>
                     <a href="#contact" class="px-3 py-2 text-white hover:bg-green-700 rounded transition vtc-drive">Contact</a>
@@ -979,6 +1014,15 @@
         <div class="container mx-auto px-4 relative z-10">
             <!-- Text Content -->
             <div class="mb-8 md:mb-12 text-center">
+                <!-- Bouton Installer PWA -->
+                <div id="pwaInstallButtonContainer" class="mb-6 flex justify-center">
+                    <button id="pwaInstallButton" class="hidden px-6 py-3 bg-white text-green-600 rounded-full font-bold shadow-2xl hover:shadow-green-300/50 transition-all duration-300 transform hover:scale-110 animate-bounce hover:animate-none flex items-center space-x-2">
+                        <i class="fas fa-download text-xl"></i>
+                        <span>Installer l'app</span>
+                        <i class="fas fa-mobile-alt"></i>
+                    </button>
+                </div>
+                
                 <h2 class="text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold mb-4 leading-tight">
                     Révolutionnez votre mobilité avec 
                     <span class="text-gradient bg-white bg-clip-text text-transparent">Dréba VTC</span>
@@ -1838,6 +1882,15 @@
                             <i class="fas fa-calendar-day text-orange-600 text-2xl"></i>
                         </div>
                     </div>
+                    <div class="bg-teal-50 p-4 rounded-lg border-l-4 border-teal-600 cursor-pointer hover:bg-teal-100 transition" onclick="openVisitsStatsModal()" title="Cliquez pour voir les détails">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-xs text-gray-600">Visites totales</p>
+                                <p class="text-2xl font-bold text-teal-600" id="totalVisitsCount">0</p>
+                            </div>
+                            <i class="fas fa-chart-line text-teal-600 text-2xl"></i>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Statistiques d'appels par période -->
@@ -1944,6 +1997,194 @@
                         </button>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Détails Chauffeur -->
+    <div id="driverDetailModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-lg shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+            <div class="bg-gradient-to-r from-green-600 to-emerald-600 text-white p-6 flex items-center justify-between">
+                <h3 class="text-2xl font-bold" id="driverDetailName">Détails du Chauffeur</h3>
+                <button onclick="closeDriverDetailModal()" class="text-white hover:text-green-200 text-2xl" title="Fermer">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="flex-1 overflow-y-auto p-6">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <!-- Colonne 1: Informations détaillées -->
+                    <div class="lg:col-span-2 space-y-6">
+                        <!-- Informations personnelles -->
+                        <div class="bg-gray-50 rounded-lg p-4">
+                            <h4 class="font-bold text-lg mb-4 text-gray-800">
+                                <i class="fas fa-user mr-2 text-green-600"></i>Informations Personnelles
+                            </h4>
+                            <div class="grid grid-cols-2 gap-4" id="driverPersonalInfo">
+                                <!-- Sera rempli dynamiquement -->
+                            </div>
+                        </div>
+
+                        <!-- Informations véhicule -->
+                        <div class="bg-gray-50 rounded-lg p-4">
+                            <h4 class="font-bold text-lg mb-4 text-gray-800">
+                                <i class="fas fa-car mr-2 text-green-600"></i>Informations Véhicule
+                            </h4>
+                            <div class="grid grid-cols-2 gap-4" id="driverVehicleInfo">
+                                <!-- Sera rempli dynamiquement -->
+                            </div>
+                        </div>
+
+                        <!-- Localisation actuelle -->
+                        <div class="bg-gray-50 rounded-lg p-4">
+                            <h4 class="font-bold text-lg mb-4 text-gray-800">
+                                <i class="fas fa-map-marker-alt mr-2 text-green-600"></i>Localisation Actuelle
+                            </h4>
+                            <div id="driverLocationInfo">
+                                <!-- Sera rempli dynamiquement -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Colonne 2: Mini Dashboard -->
+                    <div class="space-y-6">
+                        <!-- Statut -->
+                        <div class="bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg p-4 border-2 border-green-200">
+                            <h4 class="font-bold text-lg mb-4 text-gray-800">
+                                <i class="fas fa-chart-line mr-2 text-green-600"></i>Statut
+                            </h4>
+                            <div id="driverStatusInfo" class="space-y-3">
+                                <!-- Sera rempli dynamiquement -->
+                            </div>
+                        </div>
+
+                        <!-- Statistiques -->
+                        <div class="bg-blue-50 rounded-lg p-4 border-2 border-blue-200">
+                            <h4 class="font-bold text-lg mb-4 text-gray-800">
+                                <i class="fas fa-chart-bar mr-2 text-blue-600"></i>Statistiques
+                            </h4>
+                            <div id="driverStatsInfo" class="space-y-3">
+                                <!-- Sera rempli dynamiquement -->
+                            </div>
+                        </div>
+
+                        <!-- Actions rapides -->
+                        <div class="bg-yellow-50 rounded-lg p-4 border-2 border-yellow-200">
+                            <h4 class="font-bold text-lg mb-4 text-gray-800">
+                                <i class="fas fa-bolt mr-2 text-yellow-600"></i>Actions Rapides
+                            </h4>
+                            <div class="space-y-2">
+                                <button onclick="trackDriver()" id="trackDriverBtn" class="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-semibold">
+                                    <i class="fas fa-crosshairs mr-2"></i>Tracker en temps réel
+                                </button>
+                                <button onclick="contactDriverFromModal()" class="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-semibold">
+                                    <i class="fas fa-phone mr-2"></i>Appeler
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-gray-100 p-4 flex items-center justify-between border-t">
+                <div class="flex space-x-2">
+                    <button onclick="blockDriver()" id="blockDriverBtn" class="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-semibold">
+                        <i class="fas fa-ban mr-2"></i>Bloquer
+                    </button>
+                    <button onclick="unblockDriver()" id="unblockDriverBtn" class="px-6 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition font-semibold hidden">
+                        <i class="fas fa-unlock mr-2"></i>Débloquer
+                    </button>
+                    <button onclick="deleteDriver()" class="px-6 py-2 bg-red-800 text-white rounded-lg hover:bg-red-900 transition font-semibold">
+                        <i class="fas fa-trash mr-2"></i>Supprimer
+                    </button>
+                </div>
+                <button onclick="closeDriverDetailModal()" class="px-6 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition font-semibold">
+                    Fermer
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Statistiques de Visites -->
+    <div id="visitsStatsModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-lg shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+            <div class="bg-gradient-to-r from-teal-600 to-cyan-600 text-white p-6 flex items-center justify-between">
+                <h3 class="text-2xl font-bold">
+                    <i class="fas fa-chart-line mr-2"></i>Statistiques de Visites
+                </h3>
+                <button onclick="closeVisitsStatsModal()" class="text-white hover:text-teal-200 text-2xl" title="Fermer">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="flex-1 overflow-y-auto p-6">
+                <!-- Filtres par période -->
+                <div class="mb-6 flex gap-2">
+                    <button onclick="loadVisitsStats('day')" id="visitsPeriodDay" class="px-4 py-2 bg-teal-600 text-white rounded-lg text-sm font-semibold hover:bg-teal-700 transition visits-period-btn active">
+                        Aujourd'hui
+                    </button>
+                    <button onclick="loadVisitsStats('week')" id="visitsPeriodWeek" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-300 transition visits-period-btn">
+                        Cette semaine
+                    </button>
+                    <button onclick="loadVisitsStats('month')" id="visitsPeriodMonth" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-300 transition visits-period-btn">
+                        Ce mois
+                    </button>
+                    <button onclick="loadVisitsStats('all')" id="visitsPeriodAll" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-300 transition visits-period-btn">
+                        Tout
+                    </button>
+                </div>
+
+                <!-- Statistiques globales -->
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                    <div class="bg-teal-50 p-4 rounded-lg border border-teal-200">
+                        <p class="text-xs text-gray-600 mb-1">Visites totales</p>
+                        <p class="text-2xl font-bold text-teal-600" id="visitsTotalCount">0</p>
+                    </div>
+                    <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                        <p class="text-xs text-gray-600 mb-1">Visites uniques</p>
+                        <p class="text-2xl font-bold text-blue-600" id="visitsUniqueCount">0</p>
+                    </div>
+                    <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                        <p class="text-xs text-gray-600 mb-1">Pages vues</p>
+                        <p class="text-2xl font-bold text-green-600" id="pagesViewedCount">0</p>
+                    </div>
+                    <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                        <p class="text-xs text-gray-600 mb-1">Clics total</p>
+                        <p class="text-2xl font-bold text-purple-600" id="clicksTotalCount">0</p>
+                    </div>
+                </div>
+
+                <!-- Visites par page -->
+                <div class="bg-white border rounded-lg p-4 mb-6">
+                    <h4 class="font-bold text-lg mb-4 text-gray-800">
+                        <i class="fas fa-file-alt mr-2 text-teal-600"></i>Visites par Page
+                    </h4>
+                    <div id="visitsByPage" class="space-y-2">
+                        <!-- Sera rempli dynamiquement -->
+                    </div>
+                </div>
+
+                <!-- Clics par bouton -->
+                <div class="bg-white border rounded-lg p-4 mb-6">
+                    <h4 class="font-bold text-lg mb-4 text-gray-800">
+                        <i class="fas fa-mouse-pointer mr-2 text-teal-600"></i>Clics par Bouton
+                    </h4>
+                    <div id="clicksByButton" class="space-y-2">
+                        <!-- Sera rempli dynamiquement -->
+                    </div>
+                </div>
+
+                <!-- Graphique des visites par jour -->
+                <div class="bg-white border rounded-lg p-4">
+                    <h4 class="font-bold text-lg mb-4 text-gray-800">
+                        <i class="fas fa-chart-bar mr-2 text-teal-600"></i>Visites par Jour
+                    </h4>
+                    <div id="visitsByDay" class="space-y-2">
+                        <!-- Sera rempli dynamiquement -->
+                    </div>
+                </div>
+            </div>
+            <div class="bg-gray-100 p-4 flex items-center justify-end border-t">
+                <button onclick="closeVisitsStatsModal()" class="px-6 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition font-semibold">
+                    Fermer
+                </button>
             </div>
         </div>
     </div>
@@ -2155,6 +2396,27 @@
                         <p class="text-gray-600 text-sm">Vous n'avez pas encore de compte? <a href="#rental" class="text-green-600 hover:underline font-semibold">S'inscrire</a></p>
                     </div>
                 </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Banner d'installation PWA -->
+    <div id="pwaInstallBanner" class="hidden fixed bottom-0 left-0 right-0 bg-gradient-to-r from-green-600 to-emerald-600 text-white p-4 shadow-2xl z-50 transform translate-y-full transition-transform duration-300">
+        <div class="container mx-auto flex items-center justify-between flex-wrap gap-3">
+            <div class="flex items-center space-x-3">
+                <i class="fas fa-mobile-alt text-2xl"></i>
+                <div>
+                    <p class="font-bold">Installez Dréba VTC sur votre appareil</p>
+                    <p class="text-sm text-green-100">Accès rapide depuis votre écran d'accueil</p>
+                </div>
+            </div>
+            <div class="flex items-center space-x-2">
+                <button id="pwaInstallBannerButton" class="px-6 py-2 bg-white text-green-600 rounded-lg font-bold hover:bg-green-50 transition">
+                    Installer
+                </button>
+                <button id="pwaInstallBannerClose" class="px-4 py-2 text-white hover:text-green-200 transition" title="Fermer">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
             </div>
         </div>
     </div>
@@ -3503,7 +3765,7 @@
                     console.log('✅ Chauffeur enregistré dans Firebase:', driverId);
                     
                     alert(`Inscription réussie ! Bienvenue chez Dréba VTC !\n\nVotre ID chauffeur : ${driverId}\n\nVous pouvez maintenant vous connecter avec votre numéro de téléphone (+227${phone}) et votre code PIN.`);
-                    resetForm();
+                        resetForm();
                 } catch (error) {
                     console.error('❌ Erreur:', error);
                     alert('Erreur lors de l\'inscription. Veuillez réessayer plus tard.\n\nErreur: ' + error.message);
@@ -3532,7 +3794,10 @@
                 const password = prompt('Entrez le mot de passe admin:');
                 if (password === 'admin123' || password === 'dreba2024') { // Mot de passe par défaut
                     adminModal.classList.remove('hidden');
+                    // Attendre que le modal soit complètement affiché avant d'initialiser la carte
+                    setTimeout(() => {
                     initializeAdminPanel();
+                    }, 200);
                 } else if (password !== null) {
                     alert('Mot de passe incorrect.');
                 }
@@ -3543,24 +3808,75 @@
         if (closeAdminModal) {
             closeAdminModal.addEventListener('click', () => {
                 adminModal.classList.add('hidden');
+                // Redimensionner la carte quand le modal est fermé (pour éviter les problèmes)
+                if (adminMap) {
+                    setTimeout(() => {
+                        adminMap.invalidateSize();
+                    }, 100);
+                }
             });
         }
 
         // Initialiser le panneau admin
         function initializeAdminPanel() {
+            // Mettre à jour le compteur de visites
+            if (typeof updateTotalVisitsCount === 'function') {
+                updateTotalVisitsCount();
+            }
+            
             // Initialiser la carte admin
             if (typeof L !== 'undefined') {
                 const adminMapElement = document.getElementById('adminMap');
                 if (adminMapElement && !adminMap) {
-                    adminMap = L.map('adminMap').setView([13.5127, 2.1124], 12); // Niamey
+                    // Attendre que le modal soit complètement affiché et visible
+                    setTimeout(() => {
+                        // Vérifier que l'élément est visible
+                        if (adminMapElement.offsetWidth > 0 && adminMapElement.offsetHeight > 0) {
+                            adminMap = L.map('adminMap', {
+                                preferCanvas: false
+                            }).setView([13.5127, 2.1124], 12); // Niamey
+                            
                     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                        attribution: '© OpenStreetMap contributors'
+                                attribution: '© OpenStreetMap contributors',
+                                maxZoom: 19
                     }).addTo(adminMap);
+                            
+                            // Forcer le redimensionnement de la carte après l'initialisation
+                            setTimeout(() => {
+                                if (adminMap) {
+                                    adminMap.invalidateSize();
+                                    console.log('✅ Carte admin initialisée et redimensionnée');
+                                    
+                                    // Démarrer le tracking en temps réel après l'initialisation de la carte
+                                    startRealTimeTracking();
+                                    
+                                    // Recharger les chauffeurs pour afficher les marqueurs
+                                    loadDriversForAdmin();
+                                }
+                            }, 200);
+                        } else {
+                            console.warn('⚠️ Élément carte admin non visible, réessai...');
+                            // Réessayer après un délai plus long
+                            setTimeout(() => {
+                                if (!adminMap && adminMapElement.offsetWidth > 0) {
+                                    initializeAdminPanel();
+                                }
+                            }, 500);
+                        }
+                    }, 300);
+                } else if (adminMap) {
+                    // Si la carte existe déjà, forcer le redimensionnement
+                    setTimeout(() => {
+                        adminMap.invalidateSize();
+                    }, 100);
                 }
             }
 
-            // Charger les chauffeurs
+            // Charger les chauffeurs (sera aussi appelé après l'initialisation de la carte)
+            // On attend un peu pour que la carte soit prête
+            setTimeout(() => {
             loadDriversForAdmin();
+            }, 500);
             
             // Recherche de chauffeurs
             const driverSearch = document.getElementById('driverSearch');
@@ -3609,8 +3925,8 @@
                 // Arrêter l'ancien listener s'il existe
                 if (realTimeListener) {
                     realTimeListener();
-                }
-                
+            }
+            
                 realTimeListener = db.collection('drivers')
                     .where('isOnline', '==', true)
                     .onSnapshot((snapshot) => {
@@ -3623,7 +3939,7 @@
                             if (change.type === 'added') {
                                 // Nouveau chauffeur connecté
                                 console.log('✅ Nouveau chauffeur connecté:', driverId);
-                                if (driverData.location) {
+                                if (driverData.location && adminMap) {
                                     addDriverMarkerToAdminMap({
                                         driverId: driverId,
                                         ...driverData,
@@ -3632,7 +3948,7 @@
                                 }
                             } else if (change.type === 'modified') {
                                 // Mise à jour de localisation ou statut
-                                if (driverData.location) {
+                                if (driverData.location && adminMap) {
                                     updateDriverLocationOnMap({
                                         driverId: driverId,
                                         location: driverData.location,
@@ -3653,8 +3969,13 @@
                     });
             }
             
-            // Démarrer le suivi en temps réel
-            startRealTimeTracking();
+            // Démarrer le suivi en temps réel (sera aussi appelé après l'initialisation de la carte)
+            // On attend que la carte soit initialisée
+            setTimeout(() => {
+                if (adminMap) {
+                    startRealTimeTracking();
+                }
+            }, 1000);
             
             // Mettre à jour l'indicateur de statut
             const realtimeStatus = document.getElementById('realtimeStatus');
@@ -3730,36 +4051,36 @@
                 
                 // Calculer le taux de conversion
                 const rate = callsCount > 0 ? ((reservationsCount / callsCount) * 100).toFixed(1) : 0;
-                
-                // Mettre à jour les compteurs principaux
+                        
+                        // Mettre à jour les compteurs principaux
                 const activeDriversEl = document.getElementById('activeDriversCount');
                 const totalDriversEl = document.getElementById('totalDriversCount');
                 const totalUsersEl = document.getElementById('totalUsersCount');
                 const todayReservationsEl = document.getElementById('todayReservationsCount');
-                
+                        
                 if (activeDriversEl) activeDriversEl.textContent = activeDriversCount;
                 if (totalDriversEl) totalDriversEl.textContent = totalDriversCount;
                 if (totalUsersEl) totalUsersEl.textContent = totalDriversCount; // Utilisateurs = chauffeurs pour l'instant
                 if (todayReservationsEl) todayReservationsEl.textContent = reservationsCount;
-                
-                // Mettre à jour les statistiques d'appels
-                const callsReceivedCount = document.getElementById('callsReceivedCount');
-                const reservationsCreatedCount = document.getElementById('reservationsCreatedCount');
-                const conversionRate = document.getElementById('conversionRate');
-                const callsPeriodLabel = document.getElementById('callsPeriodLabel');
-                
-                if (callsReceivedCount) callsReceivedCount.textContent = callsCount;
-                if (reservationsCreatedCount) reservationsCreatedCount.textContent = reservationsCount;
-                if (conversionRate) conversionRate.textContent = rate + '%';
-                
-                // Mettre à jour le label de période
-                if (callsPeriodLabel) {
-                    const periodLabels = {
-                        'day': 'Aujourd\'hui',
-                        'month': 'Ce mois',
-                        'year': 'Cette année'
-                    };
-                    callsPeriodLabel.textContent = periodLabels[period] || 'Aujourd\'hui';
+                        
+                        // Mettre à jour les statistiques d'appels
+                        const callsReceivedCount = document.getElementById('callsReceivedCount');
+                        const reservationsCreatedCount = document.getElementById('reservationsCreatedCount');
+                        const conversionRate = document.getElementById('conversionRate');
+                        const callsPeriodLabel = document.getElementById('callsPeriodLabel');
+                        
+                        if (callsReceivedCount) callsReceivedCount.textContent = callsCount;
+                        if (reservationsCreatedCount) reservationsCreatedCount.textContent = reservationsCount;
+                        if (conversionRate) conversionRate.textContent = rate + '%';
+                        
+                        // Mettre à jour le label de période
+                        if (callsPeriodLabel) {
+                            const periodLabels = {
+                                'day': 'Aujourd\'hui',
+                                'month': 'Ce mois',
+                                'year': 'Cette année'
+                            };
+                            callsPeriodLabel.textContent = periodLabels[period] || 'Aujourd\'hui';
                 }
             } catch (error) {
                 console.error('❌ Erreur chargement stats:', error);
@@ -3826,11 +4147,11 @@
                     });
                 } else {
                     // Recharger les données si on n'a pas les infos complètes
-                    loadDriversForAdmin();
-                }
+                loadDriversForAdmin();
+            }
             }
         }
-        
+
         // Ajouter un marqueur de chauffeur sur la carte admin
         function addDriverMarkerToAdminMap(driver) {
             if (!adminMap || !driver.location || !driver.driverId) return;
@@ -3932,6 +4253,7 @@
                     drivers.forEach((driver) => {
                         const driverCard = document.createElement('div');
                         driverCard.className = `p-3 border-b hover:bg-gray-50 cursor-pointer ${driver.isActive ? 'bg-green-50' : ''}`;
+                        driverCard.onclick = () => openDriverDetailModal(driver.driverId);
                         driverCard.innerHTML = `
                             <div class="flex items-center justify-between">
                                 <div class="flex-1">
@@ -3942,15 +4264,16 @@
                                         <span class="px-2 py-1 rounded ${driver.isActive ? 'bg-green-200 text-green-800' : 'bg-gray-200 text-gray-600'}">
                                             ${driver.isActive ? 'Actif' : 'Inactif'}
                                         </span>
+                                        ${driver.isBlocked ? '<span class="ml-2 px-2 py-1 rounded bg-red-200 text-red-800">Bloqué</span>' : ''}
                                     </p>
                                 </div>
                                 <div class="text-right">
                                     ${driver.location ? `
-                                        <button onclick="showDriverLocation('${driver.driverId}')" class="text-blue-600 hover:text-blue-800 text-sm">
+                                        <button onclick="event.stopPropagation(); showDriverLocation('${driver.driverId}')" class="text-blue-600 hover:text-blue-800 text-sm" title="Localiser">
                                             <i class="fas fa-map-marker-alt"></i>
                                         </button>
                                     ` : ''}
-                                    <button onclick="contactDriver('${driver.phone}')" class="text-green-600 hover:text-green-800 text-sm ml-2">
+                                    <button onclick="event.stopPropagation(); contactDriver('${driver.phone}')" class="text-green-600 hover:text-green-800 text-sm ml-2" title="Appeler">
                                         <i class="fas fa-phone"></i>
                                     </button>
                                 </div>
@@ -3959,14 +4282,375 @@
                         driversList.appendChild(driverCard);
 
                         // Ajouter le marqueur sur la carte si actif et avec localisation
-                        if (driver.isActive && driver.location && adminMap) {
-                            addDriverMarkerToAdminMap(driver);
+                        // Attendre que la carte soit initialisée
+                        if (driver.isActive && driver.location) {
+                            if (adminMap) {
+                                addDriverMarkerToAdminMap(driver);
+                            } else {
+                                // Si la carte n'est pas encore prête, réessayer après un délai
+                                setTimeout(() => {
+                                    if (adminMap && driver.location) {
+                                        addDriverMarkerToAdminMap(driver);
+                                    }
+                                }, 1000);
+                            }
                         }
                     });
                 }
             } catch (error) {
                 console.error('❌ Erreur chargement chauffeurs:', error);
                 alert('Erreur lors du chargement des chauffeurs: ' + error.message);
+            }
+        }
+
+        // Variables pour le modal détaillé et le tracking
+        let currentDriverDetailId = null;
+        let driverTrackingListener = null;
+        let isTrackingDriver = false;
+
+        // Ouvrir le modal détaillé d'un chauffeur
+        window.openDriverDetailModal = async function(driverId) {
+            currentDriverDetailId = driverId;
+            const modal = document.getElementById('driverDetailModal');
+            if (!modal) {
+                console.error('Modal driverDetailModal non trouvé');
+                return;
+            }
+            
+            modal.classList.remove('hidden');
+            
+            try {
+                // Charger les données du chauffeur
+                const driverDoc = await db.collection('drivers').doc(driverId).get();
+                if (!driverDoc.exists) {
+                    alert('Chauffeur introuvable.');
+                    closeDriverDetailModal();
+                    return;
+                }
+                
+                const driver = { ...driverDoc.data(), driverId: driverDoc.id };
+                
+                // Charger les statistiques
+                const stats = await loadDriverStatsForAdmin(driverId);
+                
+                // Afficher les informations
+                displayDriverDetailInfo(driver, stats);
+                
+            } catch (error) {
+                console.error('❌ Erreur chargement détails:', error);
+                alert('Erreur lors du chargement des détails: ' + error.message);
+            }
+        }
+
+        // Fermer le modal détaillé
+        window.closeDriverDetailModal = function() {
+            const modal = document.getElementById('driverDetailModal');
+            if (modal) {
+                modal.classList.add('hidden');
+            }
+            stopTrackingDriver();
+            currentDriverDetailId = null;
+        }
+
+        // Afficher les informations détaillées du chauffeur
+        function displayDriverDetailInfo(driver, stats) {
+            // Nom du chauffeur
+            document.getElementById('driverDetailName').textContent = `${driver.firstName || ''} ${driver.lastName || ''}`;
+            
+            // Informations personnelles
+            const personalInfo = document.getElementById('driverPersonalInfo');
+            personalInfo.innerHTML = `
+                <div><strong>Prénom:</strong> ${driver.firstName || 'N/A'}</div>
+                <div><strong>Nom:</strong> ${driver.lastName || 'N/A'}</div>
+                <div><strong>Email:</strong> ${driver.email || 'N/A'}</div>
+                <div><strong>Téléphone:</strong> +227${driver.phone || 'N/A'}</div>
+                <div><strong>Permis:</strong> ${driver.license || 'N/A'}</div>
+                <div><strong>ID Chauffeur:</strong> ${driver.driverId || 'N/A'}</div>
+            `;
+            
+            // Informations véhicule
+            const vehicleInfo = document.getElementById('driverVehicleInfo');
+            vehicleInfo.innerHTML = `
+                <div><strong>Plaque:</strong> ${driver.vehiclePlate || 'N/A'}</div>
+                <div><strong>Marque:</strong> ${driver.vehicleBrand || 'N/A'}</div>
+                <div><strong>Couleur:</strong> ${driver.vehicleColor || 'N/A'}</div>
+                <div><strong>Type:</strong> ${driver.serviceType || 'N/A'}</div>
+            `;
+            
+            // Localisation
+            const locationInfo = document.getElementById('driverLocationInfo');
+            const lat = driver.location?.lat || driver.location?.latitude;
+            const lng = driver.location?.lng || driver.location?.longitude;
+            if (lat && lng) {
+                locationInfo.innerHTML = `
+                    <p><strong>Latitude:</strong> ${lat.toFixed(6)}</p>
+                    <p><strong>Longitude:</strong> ${lng.toFixed(6)}</p>
+                    <p><strong>Dernière mise à jour:</strong> ${driver.location?.updatedAt ? new Date(driver.location.updatedAt.toDate()).toLocaleString() : 'N/A'}</p>
+                    <button onclick="showDriverLocation('${driver.driverId}')" class="mt-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                        <i class="fas fa-map-marker-alt mr-2"></i>Voir sur la carte
+                        </button>
+                `;
+            } else {
+                locationInfo.innerHTML = '<p class="text-gray-500">Localisation non disponible</p>';
+            }
+            
+            // Statut
+            const statusInfo = document.getElementById('driverStatusInfo');
+            const isOnline = driver.isOnline === true;
+            const isBlocked = driver.isBlocked === true;
+            statusInfo.innerHTML = `
+                <div class="flex items-center justify-between p-2 bg-white rounded">
+                    <span>Statut:</span>
+                    <span class="px-3 py-1 rounded ${isOnline ? 'bg-green-200 text-green-800' : 'bg-gray-200 text-gray-600'}">
+                        ${isOnline ? 'En ligne' : 'Hors ligne'}
+                    </span>
+                    </div>
+                <div class="flex items-center justify-between p-2 bg-white rounded">
+                    <span>Compte:</span>
+                    <span class="px-3 py-1 rounded ${isBlocked ? 'bg-red-200 text-red-800' : 'bg-green-200 text-green-800'}">
+                        ${isBlocked ? 'Bloqué' : 'Actif'}
+                    </span>
+                </div>
+            `;
+            
+            // Afficher/masquer les boutons bloquer/débloquer
+            const blockBtn = document.getElementById('blockDriverBtn');
+            const unblockBtn = document.getElementById('unblockDriverBtn');
+            if (isBlocked) {
+                blockBtn.classList.add('hidden');
+                unblockBtn.classList.remove('hidden');
+            } else {
+                blockBtn.classList.remove('hidden');
+                unblockBtn.classList.add('hidden');
+            }
+            
+            // Statistiques
+            const statsInfo = document.getElementById('driverStatsInfo');
+            statsInfo.innerHTML = `
+                <div class="flex items-center justify-between p-2 bg-white rounded">
+                    <span>Courses acceptées:</span>
+                    <span class="font-bold text-green-600">${stats.acceptedRides || 0}</span>
+                </div>
+                <div class="flex items-center justify-between p-2 bg-white rounded">
+                    <span>Courses refusées:</span>
+                    <span class="font-bold text-red-600">${stats.rejectedRides || 0}</span>
+                </div>
+                <div class="flex items-center justify-between p-2 bg-white rounded">
+                    <span>Appels clients:</span>
+                    <span class="font-bold text-blue-600">${stats.clientCalls || 0}</span>
+                </div>
+                <div class="flex items-center justify-between p-2 bg-white rounded">
+                    <span>Appels admin:</span>
+                    <span class="font-bold text-purple-600">${stats.adminCalls || 0}</span>
+                </div>
+            `;
+            
+            // Stocker le numéro de téléphone pour le bouton appeler
+            window.currentDriverPhone = driver.phone;
+        }
+
+        // Charger les statistiques d'un chauffeur
+        async function loadDriverStatsForAdmin(driverId) {
+            try {
+                const driverDoc = await db.collection('drivers').doc(driverId).get();
+                if (!driverDoc.exists) return {};
+                
+                const driver = driverDoc.data();
+                const driverPhone = driver.phone?.toString().replace('+227', '').replace('227', '') || '';
+                
+                // Compter les courses acceptées
+                const acceptedSnapshot = await db.collection('bookings')
+                    .where('driverId', '==', driverId)
+                    .where('status', '==', 'accepted')
+                    .get();
+                
+                // Compter les courses refusées
+                const rejectedSnapshot = await db.collection('bookings')
+                    .where('driverId', '==', driverId)
+                    .where('status', '==', 'rejected')
+                    .get();
+                
+                // Compter les appels clients
+                const clientCallsSnapshot = await db.collection('calls')
+                    .where('phoneNumber', '==', driverPhone)
+                    .where('source', '==', 'client_map')
+                    .get();
+                
+                // Compter les appels admin
+                const adminCallsSnapshot = await db.collection('calls')
+                    .where('phoneNumber', '==', driverPhone)
+                    .where('source', '==', 'admin_panel')
+                    .get();
+                
+                return {
+                    acceptedRides: acceptedSnapshot.size,
+                    rejectedRides: rejectedSnapshot.size,
+                    clientCalls: clientCallsSnapshot.size,
+                    adminCalls: adminCallsSnapshot.size
+                };
+            } catch (error) {
+                console.error('❌ Erreur chargement stats:', error);
+                return {};
+            }
+        }
+
+        // Tracker un chauffeur en temps réel
+        window.trackDriver = function() {
+            if (!currentDriverDetailId) return;
+            
+            if (isTrackingDriver) {
+                stopTrackingDriver();
+                return;
+            }
+            
+            isTrackingDriver = true;
+            const trackBtn = document.getElementById('trackDriverBtn');
+            if (trackBtn) {
+                trackBtn.innerHTML = '<i class="fas fa-stop mr-2"></i>Arrêter le tracking';
+                trackBtn.classList.remove('bg-blue-600', 'hover:bg-blue-700');
+                trackBtn.classList.add('bg-red-600', 'hover:bg-red-700');
+            }
+            
+            // Écouter les changements de localisation en temps réel
+            driverTrackingListener = db.collection('drivers').doc(currentDriverDetailId)
+                .onSnapshot((doc) => {
+                    if (doc.exists) {
+                        const driver = doc.data();
+                        const lat = driver.location?.lat || driver.location?.latitude;
+                        const lng = driver.location?.lng || driver.location?.longitude;
+                        
+                        if (lat && lng && adminMap) {
+                            // Centrer la carte sur le chauffeur
+                            adminMap.setView([lat, lng], 16);
+                            
+                            // Mettre à jour le marqueur
+                            const markerIndex = adminMarkers.findIndex(m => m.driverId === currentDriverDetailId);
+                            if (markerIndex !== -1) {
+                                const marker = adminMarkers[markerIndex].marker;
+                                if (marker) {
+                                    marker.setLatLng([lat, lng]);
+                                    marker.openPopup();
+                                }
+                            }
+                            
+                            // Mettre à jour l'affichage de la localisation
+                            const locationInfo = document.getElementById('driverLocationInfo');
+                            if (locationInfo) {
+                                locationInfo.innerHTML = `
+                                    <p><strong>Latitude:</strong> ${lat.toFixed(6)}</p>
+                                    <p><strong>Longitude:</strong> ${lng.toFixed(6)}</p>
+                                    <p><strong>Dernière mise à jour:</strong> ${new Date().toLocaleTimeString()}</p>
+                                    <p class="text-green-600 font-semibold mt-2">
+                                        <i class="fas fa-crosshairs mr-2"></i>Tracking actif
+                                    </p>
+                                `;
+                            }
+                        }
+                    }
+                });
+        }
+
+        // Arrêter le tracking
+        function stopTrackingDriver() {
+            if (driverTrackingListener) {
+                driverTrackingListener();
+                driverTrackingListener = null;
+            }
+            isTrackingDriver = false;
+            
+            const trackBtn = document.getElementById('trackDriverBtn');
+            if (trackBtn) {
+                trackBtn.innerHTML = '<i class="fas fa-crosshairs mr-2"></i>Tracker en temps réel';
+                trackBtn.classList.remove('bg-red-600', 'hover:bg-red-700');
+                trackBtn.classList.add('bg-blue-600', 'hover:bg-blue-700');
+            }
+        }
+
+        // Bloquer un chauffeur
+        window.blockDriver = async function() {
+            if (!currentDriverDetailId) return;
+            
+            if (!confirm('Êtes-vous sûr de vouloir bloquer ce chauffeur ?')) {
+                return;
+            }
+            
+            try {
+                await db.collection('drivers').doc(currentDriverDetailId).update({
+                    isBlocked: true,
+                    blockedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    isOnline: false
+                });
+                
+                alert('Chauffeur bloqué avec succès.');
+                loadDriversForAdmin();
+                if (currentDriverDetailId) {
+                    openDriverDetailModal(currentDriverDetailId);
+                }
+            } catch (error) {
+                console.error('❌ Erreur blocage:', error);
+                alert('Erreur lors du blocage: ' + error.message);
+            }
+        }
+
+        // Débloquer un chauffeur
+        window.unblockDriver = async function() {
+            if (!currentDriverDetailId) return;
+            
+            if (!confirm('Êtes-vous sûr de vouloir débloquer ce chauffeur ?')) {
+                return;
+            }
+            
+            try {
+                await db.collection('drivers').doc(currentDriverDetailId).update({
+                    isBlocked: false,
+                    unblockedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                
+                alert('Chauffeur débloqué avec succès.');
+                loadDriversForAdmin();
+                if (currentDriverDetailId) {
+                    openDriverDetailModal(currentDriverDetailId);
+                }
+            } catch (error) {
+                console.error('❌ Erreur déblocage:', error);
+                alert('Erreur lors du déblocage: ' + error.message);
+            }
+        }
+
+        // Supprimer un chauffeur
+        window.deleteDriver = async function() {
+            if (!currentDriverDetailId) return;
+            
+            const confirmation = prompt('Tapez "SUPPRIMER" pour confirmer la suppression de ce chauffeur :');
+            if (confirmation !== 'SUPPRIMER') {
+                alert('Suppression annulée.');
+                return;
+            }
+            
+            try {
+                await db.collection('drivers').doc(currentDriverDetailId).update({
+                    status: 'deleted',
+                    deletedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    isOnline: false,
+                    isBlocked: true
+                });
+                
+                // Supprimer le marqueur de la carte
+                removeDriverMarkerFromMap(currentDriverDetailId);
+                
+                alert('Chauffeur supprimé avec succès.');
+                closeDriverDetailModal();
+                loadDriversForAdmin();
+            } catch (error) {
+                console.error('❌ Erreur suppression:', error);
+                alert('Erreur lors de la suppression: ' + error.message);
+            }
+        }
+
+        // Appeler un chauffeur depuis le modal
+        window.contactDriverFromModal = function() {
+            if (window.currentDriverPhone) {
+                contactDriver(window.currentDriverPhone);
             }
         }
 
@@ -4026,15 +4710,15 @@
                 // Trouver le chauffeur le plus proche via Firebase
                 const taxiTypeForSearch = taxiType && taxiType !== 'all' ? taxiType.toUpperCase() : null;
                 const drivers = await findAvailableDrivers(pickupLocation, taxiTypeForSearch, 1);
-                
+
                 if (drivers && drivers.length > 0) {
                     const driver = drivers[0]; // Le premier est le plus proche (trié par distance)
 
                     // Créer la réservation dans Firebase
                     const reservationData = {
-                        clientPhone: clientPhone || '87776776',
+                            clientPhone: clientPhone || '87776776',
                         pickupAddress: pickupAddress,
-                        taxiType: taxiType || 'simple',
+                            taxiType: taxiType || 'simple',
                         pickupLocation: {
                             latitude: pickupLocation.latitude,
                             longitude: pickupLocation.longitude
@@ -4083,8 +4767,31 @@
         }
 
         // Contacter un chauffeur
-        window.contactDriver = function(phone) {
+        window.contactDriver = async function(phone, callType = 'client') {
             if (confirm(`Voulez-vous appeler ${phone} ?`)) {
+                // Enregistrer l'appel dans Firestore
+                try {
+                    if (typeof db !== 'undefined' && db) {
+                        // Déterminer le type d'appel
+                        const isAdminCall = callType === 'admin' || document.getElementById('adminModal')?.classList.contains('hidden') === false;
+                        const finalCallType = isAdminCall ? 'admin' : 'client';
+                        
+                        // Nettoyer le numéro de téléphone
+                        const cleanPhone = phone.toString().replace('+227', '').replace('227', '').trim();
+                        
+                        await db.collection('calls').add({
+                            phoneNumber: cleanPhone,
+                            callType: finalCallType,
+                            timestamp: getCurrentTimestamp(),
+                            date: new Date().toISOString(),
+                            source: isAdminCall ? 'admin_panel' : 'client_map'
+                        });
+                        console.log('✅ Appel enregistré:', finalCallType, cleanPhone);
+                    }
+                } catch (error) {
+                    console.error('Erreur enregistrement appel:', error);
+                }
+                
                 window.location.href = `tel:${phone}`;
             }
         };
@@ -4092,21 +4799,66 @@
         // Afficher la localisation d'un chauffeur
         window.showDriverLocation = async function(driverId) {
             try {
+                // Vérifier que la carte admin est initialisée
+                if (!adminMap) {
+                    console.warn('⚠️ Carte admin non initialisée, initialisation...');
+                    initializeAdminPanel();
+                    // Attendre que la carte soit prête
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                }
+                
                 // Récupérer le chauffeur depuis Firebase
                 const driverDoc = await db.collection('drivers').doc(driverId).get();
                 
                 if (driverDoc.exists) {
                     const driver = driverDoc.data();
                     
-                    if (driver.location && driver.location.lat && driver.location.lng && adminMap) {
-                        adminMap.setView([driver.location.lat, driver.location.lng], 15);
+                    // Vérifier les différentes formes de localisation
+                    const lat = driver.location?.lat || driver.location?.latitude;
+                    const lng = driver.location?.lng || driver.location?.longitude;
+                    
+                    if (lat && lng && adminMap) {
+                        console.log('📍 Centrage sur chauffeur:', { driverId, lat, lng });
+                        adminMap.setView([lat, lng], 15);
+                        
+                        // Trouver et ouvrir le popup du marqueur
+                        const markerIndex = adminMarkers.findIndex(m => m.driverId === driverId);
+                        if (markerIndex !== -1) {
+                            const marker = adminMarkers[markerIndex].marker;
+                            if (marker) {
+                                setTimeout(() => {
+                                    marker.openPopup();
+                                }, 300);
+                            }
+                    } else {
+                            // Si le marqueur n'existe pas, le créer
+                            addDriverMarkerToAdminMap({
+                                driverId: driverId,
+                                ...driver,
+                                isActive: true
+                            });
+                            setTimeout(() => {
+                                const newMarkerIndex = adminMarkers.findIndex(m => m.driverId === driverId);
+                                if (newMarkerIndex !== -1) {
+                                    adminMarkers[newMarkerIndex].marker.openPopup();
+                                }
+                            }, 500);
+                        }
+                        
+                        // S'assurer que la carte est redimensionnée
+                        setTimeout(() => {
+                            adminMap.invalidateSize();
+                        }, 100);
+                    } else {
+                        console.warn('⚠️ Localisation du chauffeur non disponible:', driver);
+                        alert('Localisation du chauffeur non disponible.');
                     }
                 } else {
                     alert('Chauffeur introuvable.');
                 }
             } catch (error) {
                 console.error('❌ Erreur:', error);
-                alert('Erreur lors de la récupération de la localisation du chauffeur.');
+                alert('Erreur lors de la récupération de la localisation du chauffeur: ' + error.message);
             }
         };
 
@@ -4218,46 +4970,46 @@
                         isOnline: true
                     });
 
-                    // Si partage de localisation demandé
+                        // Si partage de localisation demandé
                     if (shareLocation) {
-                        if (navigator.geolocation) {
-                            navigator.geolocation.getCurrentPosition(
-                                async (position) => {
-                                    const location = {
-                                        latitude: position.coords.latitude,
-                                        longitude: position.coords.longitude
-                                    };
+                            if (navigator.geolocation) {
+                                navigator.geolocation.getCurrentPosition(
+                                    async (position) => {
+                                        const location = {
+                                            latitude: position.coords.latitude,
+                                            longitude: position.coords.longitude
+                                        };
 
                                     // Enregistrer la localisation dans Firestore
                                     await db.collection('drivers').doc(currentDriverId).update({
-                                        location: {
-                                            lat: location.latitude,
-                                            lng: location.longitude
+                                                location: {
+                                                    lat: location.latitude,
+                                                    lng: location.longitude
                                         },
                                         locationUpdatedAt: getCurrentTimestamp()
-                                    });
+                                            });
 
-                                    // Démarrer le suivi de localisation
-                                    startLocationTracking(currentDriverId);
+                                        // Démarrer le suivi de localisation
+                                        startLocationTracking(currentDriverId);
 
                                     // Rediriger vers le tableau de bord du chauffeur
                                     window.location.href = `driver-dashboard.html?driverId=${currentDriverId}`;
-                                },
-                                (error) => {
-                                    alert('Impossible d\'accéder à votre localisation. Veuillez autoriser l\'accès à la géolocalisation dans les paramètres de votre navigateur.');
-                                    console.error('Erreur de géolocalisation:', error);
-                                },
-                                {
-                                    enableHighAccuracy: true,
-                                    timeout: 10000,
-                                    maximumAge: 0
-                                }
-                            );
+                                    },
+                                    (error) => {
+                                        alert('Impossible d\'accéder à votre localisation. Veuillez autoriser l\'accès à la géolocalisation dans les paramètres de votre navigateur.');
+                                        console.error('Erreur de géolocalisation:', error);
+                                    },
+                                    {
+                                        enableHighAccuracy: true,
+                                        timeout: 10000,
+                                        maximumAge: 0
+                                    }
+                                );
+                            } else {
+                                alert('La géolocalisation n\'est pas supportée par votre navigateur.');
+                            }
                         } else {
-                            alert('La géolocalisation n\'est pas supportée par votre navigateur.');
-                        }
-                    } else {
-                        // Connexion sans partage de localisation
+                            // Connexion sans partage de localisation
                         // Rediriger quand même vers le tableau de bord
                         // L'utilisateur pourra activer le partage de localisation depuis là
                         window.location.href = `driver-dashboard.html?driverId=${currentDriverId}`;
@@ -4290,12 +5042,12 @@
                     // Mettre à jour dans Firebase
                     try {
                         await db.collection('drivers').doc(driverId).update({
-                            location: {
-                                lat: location.latitude,
-                                lng: location.longitude
+                                location: {
+                                    lat: location.latitude,
+                                    lng: location.longitude
                             },
                             locationUpdatedAt: getCurrentTimestamp()
-                        });
+                            });
                         console.log('✅ Localisation mise à jour dans Firebase');
                     } catch (error) {
                         console.error('❌ Erreur mise à jour localisation:', error);
@@ -4578,12 +5330,15 @@
                         driver.location.lng
                     );
 
+                    // Normaliser le serviceType en majuscules pour la cohérence
+                    const normalizedServiceType = (driver.serviceType || 'simple').toUpperCase();
+
                     availableDrivers.push({
                         driverId: doc.id,
                         firstName: driver.firstName || '',
                         lastName: driver.lastName || '',
                         phone: driver.phone || '',
-                        serviceType: driver.serviceType || 'simple',
+                        serviceType: normalizedServiceType, // Toujours en majuscules (SIMPLE, STANDARD, VIP)
                         vehicleBrand: driver.vehicleBrand || '',
                         vehicleColor: driver.vehicleColor || '',
                         location: driver.location,
@@ -4695,9 +5450,10 @@
                                 drivers.forEach((driver, index) => {
                                     // Couleur différente selon le type
                                     let iconColor = '#10b981'; // Vert par défaut
-                                    if (driver.serviceType === 'STANDARD') {
+                                    const driverServiceType = (driver.serviceType || '').toUpperCase();
+                                    if (driverServiceType === 'STANDARD') {
                                         iconColor = '#f59e0b'; // Orange
-                                    } else if (driver.serviceType === 'VIP') {
+                                    } else if (driverServiceType === 'VIP') {
                                         iconColor = '#8b5cf6'; // Violet
                                     }
                                     
@@ -4808,24 +5564,24 @@
                     
                     // Afficher un message d'erreur détaillé
                     alert(`${errorMessage}\n\n${errorDetails}\n\nCode d'erreur: ${errorCode || 'N/A'}\n\nEn cas de problème persistant, appelez le 87 77 67 76 pour réserver.`);
-                    
-                    // Masquer la section véhicule sélectionné avec bouton d'appel
-                    if (selectedVehicleDiv) {
-                        selectedVehicleDiv.innerHTML = `
-                            <div class="text-center py-6">
-                                <div class="mb-4">
-                                    <i class="fas fa-exclamation-triangle text-4xl text-yellow-300 mb-3"></i>
+                        
+                        // Masquer la section véhicule sélectionné avec bouton d'appel
+                        if (selectedVehicleDiv) {
+                            selectedVehicleDiv.innerHTML = `
+                                <div class="text-center py-6">
+                                    <div class="mb-4">
+                                        <i class="fas fa-exclamation-triangle text-4xl text-yellow-300 mb-3"></i>
                                     <p class="text-green-200 text-sm mb-2 font-semibold">${errorMessage}</p>
                                     <p class="text-green-300 text-xs mb-2">${errorDetails}</p>
                                     <p class="text-green-200 text-xs mt-4">Ouvrez la console (F12) pour voir les détails de l'erreur.</p>
+                                    </div>
+                                    <a href="tel:+22787776776" class="inline-flex items-center justify-center px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg font-semibold hover:from-green-600 hover:to-emerald-700 transition transform hover:scale-105 shadow-lg">
+                                        <i class="fas fa-phone mr-2"></i>
+                                        Appeler le 87 77 67 76
+                                    </a>
                                 </div>
-                                <a href="tel:+22787776776" class="inline-flex items-center justify-center px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg font-semibold hover:from-green-600 hover:to-emerald-700 transition transform hover:scale-105 shadow-lg">
-                                    <i class="fas fa-phone mr-2"></i>
-                                    Appeler le 87 77 67 76
-                                </a>
-                            </div>
-                        `;
-                    }
+                            `;
+                        }
                 } finally {
                     // Réactiver le bouton
                     submitBtn.disabled = false;
@@ -4893,9 +5649,10 @@
                                     drivers.forEach((driver, index) => {
                                         // Couleur différente selon le type
                                         let iconColor = '#10b981'; // Vert par défaut
-                                        if (driver.serviceType === 'STANDARD') {
+                                        const driverServiceType = (driver.serviceType || '').toUpperCase();
+                                        if (driverServiceType === 'STANDARD') {
                                             iconColor = '#f59e0b'; // Orange
-                                        } else if (driver.serviceType === 'VIP') {
+                                        } else if (driverServiceType === 'VIP') {
                                             iconColor = '#8b5cf6'; // Violet
                                         }
                                         
@@ -4992,24 +5749,24 @@
                         
                         // Afficher un message d'erreur détaillé
                         alert(`${errorMessage}\n\n${errorDetails}\n\nEn cas de problème persistant, appelez le 87 77 67 76 pour réserver.`);
-                        
-                        // Masquer la section véhicule sélectionné avec bouton d'appel
-                        if (selectedVehicleDiv) {
-                            selectedVehicleDiv.innerHTML = `
-                                <div class="text-center py-6">
-                                    <div class="mb-4">
-                                        <i class="fas fa-exclamation-triangle text-4xl text-yellow-300 mb-3"></i>
+                            
+                            // Masquer la section véhicule sélectionné avec bouton d'appel
+                            if (selectedVehicleDiv) {
+                                selectedVehicleDiv.innerHTML = `
+                                    <div class="text-center py-6">
+                                        <div class="mb-4">
+                                            <i class="fas fa-exclamation-triangle text-4xl text-yellow-300 mb-3"></i>
                                         <p class="text-green-200 text-sm mb-2 font-semibold">${errorMessage}</p>
                                         <p class="text-green-300 text-xs mb-2">${errorDetails}</p>
                                         <p class="text-green-200 text-xs mt-4">Ouvrez la console (F12) pour voir les détails de l'erreur.</p>
+                                        </div>
+                                        <a href="tel:+22787776776" class="inline-flex items-center justify-center px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg font-semibold hover:from-green-600 hover:to-emerald-700 transition transform hover:scale-105 shadow-lg">
+                                            <i class="fas fa-phone mr-2"></i>
+                                            Appeler le 87 77 67 76
+                                        </a>
                                     </div>
-                                    <a href="tel:+22787776776" class="inline-flex items-center justify-center px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg font-semibold hover:from-green-600 hover:to-emerald-700 transition transform hover:scale-105 shadow-lg">
-                                        <i class="fas fa-phone mr-2"></i>
-                                        Appeler le 87 77 67 76
-                                    </a>
-                                </div>
-                            `;
-                        }
+                                `;
+                            }
                     } finally {
                         // Réactiver le bouton
                         submitBtn.disabled = false;
@@ -5056,16 +5813,17 @@
             
             // Générer le HTML pour chaque véhicule
             selectedVehicleDiv.innerHTML = drivers.map((driver, index) => {
-                // Déterminer l'image selon le type
+                // Déterminer l'image selon le type (normaliser en majuscules pour la comparaison)
+                const serviceTypeUpper = (driver.serviceType || '').toUpperCase();
                 let vehicleImage = 'Photo Taxi/Taxi Simple (1).jpeg';
                 let typeLabel = 'Simple';
                 let typeColor = 'bg-green-500';
                 
-                if (driver.serviceType === 'STANDARD') {
+                if (serviceTypeUpper === 'STANDARD') {
                     vehicleImage = 'Photo Taxi/Taxi Standard.jpeg';
                     typeLabel = 'Standard';
                     typeColor = 'bg-orange-500';
-                } else if (driver.serviceType === 'VIP') {
+                } else if (serviceTypeUpper === 'VIP') {
                     vehicleImage = 'Photo Taxi/Taxi VIP (1).jpeg';
                     typeLabel = 'VIP';
                     typeColor = 'bg-purple-500';
@@ -5173,7 +5931,7 @@
         async function registerCall(phoneNumber = '87776776', callType = 'reservation') {
             try {
                 await db.collection('calls').add({
-                    phoneNumber: phoneNumber,
+                        phoneNumber: phoneNumber,
                     callType: callType,
                     timestamp: getCurrentTimestamp(),
                     date: new Date().toISOString()
@@ -5219,6 +5977,489 @@
 
         // Initialiser Auth (authentification)
         const auth = firebase.auth();
+
+        // ============================================
+        // Système de Tracking des Visites
+        // ============================================
+        
+        // Générer un ID unique pour cette session
+        function getSessionId() {
+            let sessionId = localStorage.getItem('sessionId');
+            if (!sessionId) {
+                sessionId = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                localStorage.setItem('sessionId', sessionId);
+            }
+            return sessionId;
+        }
+
+        // Enregistrer une visite
+        async function trackVisit(pageName = null) {
+            try {
+                if (typeof db === 'undefined' || !db) return;
+                
+                const page = pageName || window.location.hash || 'home';
+                const sessionId = getSessionId();
+                const timestamp = firebase.firestore.FieldValue.serverTimestamp();
+                const date = new Date();
+                const dateStr = date.toISOString().split('T')[0]; // YYYY-MM-DD
+                
+                await db.collection('visits').add({
+                    sessionId: sessionId,
+                    page: page,
+                    timestamp: timestamp,
+                    date: dateStr,
+                    hour: date.getHours(),
+                    day: date.getDay(), // 0 = dimanche, 6 = samedi
+                    week: getWeekNumber(date),
+                    month: date.getMonth() + 1,
+                    year: date.getFullYear(),
+                    userAgent: navigator.userAgent,
+                    referrer: document.referrer || 'direct'
+                });
+                
+                console.log('✅ Visite enregistrée:', page);
+            } catch (error) {
+                console.error('❌ Erreur enregistrement visite:', error);
+            }
+        }
+
+        // Enregistrer un clic sur un bouton
+        async function trackButtonClick(buttonId, buttonText = null) {
+            try {
+                if (typeof db === 'undefined' || !db) return;
+                
+                const sessionId = getSessionId();
+                const timestamp = firebase.firestore.FieldValue.serverTimestamp();
+                const date = new Date();
+                const dateStr = date.toISOString().split('T')[0];
+                
+                await db.collection('buttonClicks').add({
+                    sessionId: sessionId,
+                    buttonId: buttonId,
+                    buttonText: buttonText || buttonId,
+                    timestamp: timestamp,
+                    date: dateStr,
+                    hour: date.getHours(),
+                    day: date.getDay(),
+                    week: getWeekNumber(date),
+                    month: date.getMonth() + 1,
+                    year: date.getFullYear(),
+                    page: window.location.hash || 'home'
+                });
+                
+                console.log('✅ Clic enregistré:', buttonId);
+            } catch (error) {
+                console.error('❌ Erreur enregistrement clic:', error);
+            }
+        }
+
+        // Obtenir le numéro de semaine
+        function getWeekNumber(date) {
+            const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+            const dayNum = d.getUTCDay() || 7;
+            d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+            const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+            return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+        }
+
+        // Enregistrer la visite initiale
+        document.addEventListener('DOMContentLoaded', function() {
+            // Enregistrer la visite de la page d'accueil
+            setTimeout(() => {
+                trackVisit('home');
+            }, 1000);
+
+            // Tracker les changements de hash (navigation)
+            window.addEventListener('hashchange', function() {
+                const page = window.location.hash.replace('#', '') || 'home';
+                trackVisit(page);
+            });
+
+            // Tracker les clics sur les boutons principaux
+            const buttonsToTrack = [
+                'findVehicleBtn',
+                'driverLoginBtn',
+                'driverLoginBtnMobile',
+                'adminBtn',
+                'useMyLocationBtn',
+                'assignDriverBtn',
+                'contactDriverBtn'
+            ];
+
+            buttonsToTrack.forEach(buttonId => {
+                const button = document.getElementById(buttonId);
+                if (button) {
+                    button.addEventListener('click', function() {
+                        trackButtonClick(buttonId, button.textContent.trim());
+                    });
+                }
+            });
+
+            // Tracker les clics sur les liens de navigation
+            document.querySelectorAll('a[href^="#"]').forEach(link => {
+                link.addEventListener('click', function() {
+                    const page = this.getAttribute('href').replace('#', '') || 'home';
+                    trackButtonClick('nav_' + page, this.textContent.trim());
+                });
+            });
+        });
+
+        // ============================================
+        // Fonctions de Statistiques de Visites
+        // ============================================
+
+        // Ouvrir le modal des statistiques
+        window.openVisitsStatsModal = function() {
+            const modal = document.getElementById('visitsStatsModal');
+            if (modal) {
+                modal.classList.remove('hidden');
+                loadVisitsStats('day');
+            }
+        };
+
+        // Fermer le modal des statistiques
+        window.closeVisitsStatsModal = function() {
+            const modal = document.getElementById('visitsStatsModal');
+            if (modal) {
+                modal.classList.add('hidden');
+            }
+        };
+
+        // Charger les statistiques de visites
+        window.loadVisitsStats = async function(period = 'day') {
+            try {
+                if (typeof db === 'undefined' || !db) {
+                    console.error('Firebase non initialisé');
+                    return;
+                }
+
+                // Mettre à jour les boutons actifs
+                document.querySelectorAll('.visits-period-btn').forEach(btn => {
+                    btn.classList.remove('active', 'bg-teal-600', 'text-white');
+                    btn.classList.add('bg-gray-200', 'text-gray-700');
+                });
+                const activeBtn = document.getElementById(`visitsPeriod${period.charAt(0).toUpperCase() + period.slice(1)}`);
+                if (activeBtn) {
+                    activeBtn.classList.add('active', 'bg-teal-600', 'text-white');
+                    activeBtn.classList.remove('bg-gray-200', 'text-gray-700');
+                }
+
+                const now = new Date();
+                let startDate = new Date(0);
+
+                if (period === 'day') {
+                    startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                } else if (period === 'week') {
+                    const dayOfWeek = now.getDay();
+                    startDate = new Date(now.getTime() - dayOfWeek * 24 * 60 * 60 * 1000);
+                    startDate.setHours(0, 0, 0, 0);
+                } else if (period === 'month') {
+                    startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+                }
+
+                // Charger toutes les visites
+                const visitsSnapshot = await db.collection('visits').get();
+                const clicksSnapshot = await db.collection('buttonClicks').get();
+
+                const visits = [];
+                const clicks = [];
+
+                visitsSnapshot.forEach(doc => {
+                    const data = doc.data();
+                    const visitDate = data.timestamp ? data.timestamp.toDate() : new Date(data.date);
+                    if (period === 'all' || visitDate >= startDate) {
+                        visits.push(data);
+                    }
+                });
+
+                clicksSnapshot.forEach(doc => {
+                    const data = doc.data();
+                    const clickDate = data.timestamp ? data.timestamp.toDate() : new Date(data.date);
+                    if (period === 'all' || clickDate >= startDate) {
+                        clicks.push(data);
+                    }
+                });
+
+                // Calculer les statistiques
+                const uniqueSessions = new Set(visits.map(v => v.sessionId));
+                const pagesCount = {};
+                const buttonsCount = {};
+                const daysCount = {};
+
+                visits.forEach(visit => {
+                    // Par page
+                    pagesCount[visit.page] = (pagesCount[visit.page] || 0) + 1;
+                    
+                    // Par jour
+                    const dayKey = visit.date || new Date(visit.timestamp?.toDate()).toISOString().split('T')[0];
+                    daysCount[dayKey] = (daysCount[dayKey] || 0) + 1;
+                });
+
+                clicks.forEach(click => {
+                    buttonsCount[click.buttonId] = (buttonsCount[click.buttonId] || 0) + 1;
+                });
+
+                // Afficher les statistiques globales
+                document.getElementById('visitsTotalCount').textContent = visits.length;
+                document.getElementById('visitsUniqueCount').textContent = uniqueSessions.size;
+                document.getElementById('pagesViewedCount').textContent = Object.keys(pagesCount).length;
+                document.getElementById('clicksTotalCount').textContent = clicks.length;
+
+                // Afficher les visites par page
+                const visitsByPageDiv = document.getElementById('visitsByPage');
+                if (visitsByPageDiv) {
+                    const sortedPages = Object.entries(pagesCount).sort((a, b) => b[1] - a[1]);
+                    visitsByPageDiv.innerHTML = sortedPages.map(([page, count]) => `
+                        <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                            <div class="flex items-center space-x-3">
+                                <i class="fas fa-file-alt text-teal-600"></i>
+                                <span class="font-medium">${page || 'Accueil'}</span>
+                            </div>
+                            <span class="font-bold text-teal-600">${count}</span>
+                        </div>
+                    `).join('');
+                }
+
+                // Afficher les clics par bouton
+                const clicksByButtonDiv = document.getElementById('clicksByButton');
+                if (clicksByButtonDiv) {
+                    const sortedButtons = Object.entries(buttonsCount).sort((a, b) => b[1] - a[1]);
+                    clicksByButtonDiv.innerHTML = sortedButtons.map(([buttonId, count]) => `
+                        <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                            <div class="flex items-center space-x-3">
+                                <i class="fas fa-mouse-pointer text-purple-600"></i>
+                                <span class="font-medium">${buttonId.replace('nav_', '').replace(/_/g, ' ')}</span>
+                            </div>
+                            <span class="font-bold text-purple-600">${count}</span>
+                        </div>
+                    `).join('');
+                }
+
+                // Afficher les visites par jour
+                const visitsByDayDiv = document.getElementById('visitsByDay');
+                if (visitsByDayDiv) {
+                    const sortedDays = Object.entries(daysCount).sort((a, b) => new Date(a[0]) - new Date(b[0]));
+                    const maxVisits = Math.max(...Object.values(daysCount), 1);
+                    visitsByDayDiv.innerHTML = sortedDays.map(([day, count]) => {
+                        const percentage = (count / maxVisits) * 100;
+                        const date = new Date(day);
+                        const dayName = date.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' });
+                        return `
+                            <div class="mb-2">
+                                <div class="flex items-center justify-between mb-1">
+                                    <span class="text-sm font-medium">${dayName}</span>
+                                    <span class="text-sm font-bold text-teal-600">${count}</span>
+                                </div>
+                                <div class="w-full bg-gray-200 rounded-full h-2">
+                                    <div class="bg-teal-600 h-2 rounded-full" style="width: ${percentage}%"></div>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                }
+
+                // Mettre à jour le compteur global dans le panneau admin
+                updateTotalVisitsCount();
+
+            } catch (error) {
+                console.error('❌ Erreur chargement stats visites:', error);
+            }
+        };
+
+        // Mettre à jour le compteur total de visites
+        async function updateTotalVisitsCount() {
+            try {
+                if (typeof db === 'undefined' || !db) return;
+                
+                const visitsSnapshot = await db.collection('visits').get();
+                const totalVisits = visitsSnapshot.size;
+                
+                const totalVisitsElement = document.getElementById('totalVisitsCount');
+                if (totalVisitsElement) {
+                    totalVisitsElement.textContent = totalVisits;
+                }
+            } catch (error) {
+                console.error('❌ Erreur mise à jour compteur:', error);
+            }
+        }
+
+        // Mettre à jour le compteur au chargement du panneau admin
+        // Cette fonction sera appelée depuis initializeAdminPanel
+        
+        // ============================================
+        // PWA - Installation et Gestion
+        // ============================================
+        
+        let deferredPrompt = null;
+        let installBannerShown = false;
+
+        // Enregistrer le Service Worker
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then((registration) => {
+                        console.log('✅ Service Worker enregistré:', registration.scope);
+                    })
+                    .catch((error) => {
+                        console.error('❌ Erreur enregistrement Service Worker:', error);
+                    });
+            });
+        }
+
+        // Détecter l'événement beforeinstallprompt
+        window.addEventListener('beforeinstallprompt', (e) => {
+            // Empêcher l'affichage automatique de la bannière
+            e.preventDefault();
+            deferredPrompt = e;
+            
+            // Afficher le bouton d'installation dans le hero
+            const installButton = document.getElementById('pwaInstallButton');
+            if (installButton) {
+                installButton.classList.remove('hidden');
+            }
+            
+            // Afficher la bannière après un délai (si pas déjà affichée)
+            if (!installBannerShown && shouldShowBanner()) {
+                setTimeout(() => {
+                    showInstallBanner();
+                }, 3000); // Afficher après 3 secondes
+            }
+        });
+
+        // Afficher la bannière d'installation
+        function showInstallBanner() {
+            if (deferredPrompt && !installBannerShown) {
+                const banner = document.getElementById('pwaInstallBanner');
+                if (banner) {
+                    banner.classList.remove('hidden');
+                    setTimeout(() => {
+                        banner.classList.remove('translate-y-full');
+                    }, 100);
+                    installBannerShown = true;
+                }
+            }
+        }
+
+        // Cacher la bannière d'installation
+        function hideInstallBanner() {
+            const banner = document.getElementById('pwaInstallBanner');
+            if (banner) {
+                banner.classList.add('translate-y-full');
+                setTimeout(() => {
+                    banner.classList.add('hidden');
+                }, 300);
+            }
+        }
+
+        // Gérer le clic sur le bouton d'installation (hero)
+        document.addEventListener('DOMContentLoaded', function() {
+            const pwaInstallButton = document.getElementById('pwaInstallButton');
+            if (pwaInstallButton) {
+                pwaInstallButton.addEventListener('click', async () => {
+                    if (deferredPrompt) {
+                        // Afficher le prompt d'installation
+                        deferredPrompt.prompt();
+                        
+                        // Attendre la réponse de l'utilisateur
+                        const { outcome } = await deferredPrompt.userChoice;
+                        
+                        if (outcome === 'accepted') {
+                            console.log('✅ Utilisateur a accepté l\'installation');
+                            // Enregistrer l'installation dans les statistiques
+                            if (typeof trackButtonClick === 'function') {
+                                trackButtonClick('pwa_install_accepted', 'Installation PWA acceptée');
+                            }
+                        } else {
+                            console.log('❌ Utilisateur a refusé l\'installation');
+                        }
+                        
+                        deferredPrompt = null;
+                        pwaInstallButton.classList.add('hidden');
+                        hideInstallBanner();
+                    }
+                });
+            }
+
+            // Gérer le clic sur le bouton d'installation (bannière)
+            const pwaInstallBannerButton = document.getElementById('pwaInstallBannerButton');
+            if (pwaInstallBannerButton) {
+                pwaInstallBannerButton.addEventListener('click', async () => {
+                    if (deferredPrompt) {
+                        deferredPrompt.prompt();
+                        const { outcome } = await deferredPrompt.userChoice;
+                        
+                        if (outcome === 'accepted') {
+                            console.log('✅ Installation acceptée depuis la bannière');
+                            if (typeof trackButtonClick === 'function') {
+                                trackButtonClick('pwa_install_banner_accepted', 'Installation PWA depuis bannière');
+                            }
+                        }
+                        
+                        deferredPrompt = null;
+                        hideInstallBanner();
+                        if (pwaInstallButton) {
+                            pwaInstallButton.classList.add('hidden');
+                        }
+                    }
+                });
+            }
+
+            // Gérer la fermeture de la bannière
+            const pwaInstallBannerClose = document.getElementById('pwaInstallBannerClose');
+            if (pwaInstallBannerClose) {
+                pwaInstallBannerClose.addEventListener('click', () => {
+                    hideInstallBanner();
+                    localStorage.setItem('pwaBannerDismissed', 'true');
+                    // Ne plus afficher pendant 7 jours
+                    const dismissDate = new Date();
+                    dismissDate.setDate(dismissDate.getDate() + 7);
+                    localStorage.setItem('pwaBannerDismissedUntil', dismissDate.toISOString());
+                });
+            }
+        });
+
+        // Vérifier si l'app est déjà installée
+        window.addEventListener('appinstalled', () => {
+            console.log('✅ PWA installée avec succès');
+            deferredPrompt = null;
+            hideInstallBanner();
+            const pwaInstallButton = document.getElementById('pwaInstallButton');
+            if (pwaInstallButton) {
+                pwaInstallButton.classList.add('hidden');
+            }
+            
+            // Enregistrer l'installation
+            if (typeof trackButtonClick === 'function') {
+                trackButtonClick('pwa_installed', 'PWA installée');
+            }
+        });
+
+        // Vérifier si on doit afficher la bannière (pas déjà fermée récemment)
+        function shouldShowBanner() {
+            const dismissed = localStorage.getItem('pwaBannerDismissed');
+            if (!dismissed) return true;
+            
+            const dismissedUntil = localStorage.getItem('pwaBannerDismissedUntil');
+            if (dismissedUntil) {
+                const untilDate = new Date(dismissedUntil);
+                if (new Date() > untilDate) {
+                    localStorage.removeItem('pwaBannerDismissed');
+                    localStorage.removeItem('pwaBannerDismissedUntil');
+                    return true;
+                }
+            }
+            
+            return false;
+        }
+
+        // Vérifier si l'app est en mode standalone (déjà installée)
+        if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone) {
+            console.log('✅ App déjà installée');
+            const pwaInstallButton = document.getElementById('pwaInstallButton');
+            if (pwaInstallButton) {
+                pwaInstallButton.classList.add('hidden');
+            }
+        }
         
         // Vérifier que Firebase est bien initialisé
         if (typeof db !== 'undefined') {
@@ -5273,12 +6514,12 @@
                 console.error('⚠️ Erreur Firebase détectée:', event.error);
             }
         });
-        
+                
         window.addEventListener('unhandledrejection', (event) => {
             console.error('❌ Promise rejetée non gérée:', event.reason);
             if (event.reason && (event.reason.message?.includes('Firebase') || event.reason.message?.includes('Firestore') || event.reason.code === 'permission-denied')) {
                 console.error('⚠️ Erreur Firebase dans une Promise:', event.reason);
-            }
+        }
         });
     </script>
     <script>
