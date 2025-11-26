@@ -4112,21 +4112,6 @@
 
         // Le suivi en temps réel est maintenant géré par Firebase onSnapshot
         // Plus besoin de WebSocket - le code a été remplacé par Firebase
-                // Retirer le marqueur du chauffeur déconnecté
-                if (data.driverId) {
-                    const markerIndex = adminMarkers.findIndex(m => m.driverId === data.driverId);
-                    if (markerIndex !== -1) {
-                        const markerData = adminMarkers[markerIndex];
-                        if (markerData.marker && adminMap) {
-                            adminMap.removeLayer(markerData.marker);
-                        }
-                        adminMarkers.splice(markerIndex, 1);
-                    }
-                    // Recharger la liste
-                    loadDriversForAdmin();
-                }
-            });
-        }
 
         // Mise à jour périodique de la liste (toutes les 10 secondes)
         setInterval(() => {
@@ -4518,25 +4503,38 @@
                     driversSnapshot = await db.collection('drivers').get();
                     console.log('✅ Chauffeurs récupérés:', driversSnapshot.size);
                 } catch (firestoreError) {
-                    console.error('❌ Erreur Firestore:', firestoreError);
+                    console.error('❌ Erreur Firestore lors de la récupération:', firestoreError);
+                    console.error('❌ Détails de l\'erreur Firestore:', {
+                        code: firestoreError.code,
+                        message: firestoreError.message,
+                        name: firestoreError.name,
+                        stack: firestoreError.stack
+                    });
+                    
+                    // Créer une erreur enrichie avec toutes les informations
+                    const error = new Error(firestoreError.message || 'Erreur lors de la récupération des chauffeurs depuis Firestore.');
+                    error.code = firestoreError.code;
+                    error.originalError = firestoreError;
                     
                     // Vérifier si c'est une erreur de permissions
-                    if (firestoreError.code === 'permission-denied' || firestoreError.message.includes('permission')) {
-                        const error = new Error('Permissions Firestore insuffisantes. Vérifiez les règles Firestore dans la console Firebase.');
+                    if (firestoreError.code === 'permission-denied' || 
+                        firestoreError.code === 'PERMISSION_DENIED' ||
+                        (firestoreError.message && firestoreError.message.toLowerCase().includes('permission'))) {
                         error.type = 'PERMISSION_DENIED';
-                        error.originalError = firestoreError;
+                        error.message = 'Permissions Firestore insuffisantes. Vérifiez les règles Firestore dans la console Firebase (Firestore Database → Règles).';
                         throw error;
                     }
                     
                     // Vérifier si c'est une erreur d'index
-                    if (firestoreError.message && firestoreError.message.includes('index')) {
-                        const error = new Error('Index Firestore manquant. Cliquez sur le lien dans la console pour créer l\'index.');
+                    if (firestoreError.message && firestoreError.message.toLowerCase().includes('index')) {
                         error.type = 'INDEX_REQUIRED';
-                        error.originalError = firestoreError;
+                        error.message = 'Index Firestore manquant. Cliquez sur le lien dans la console pour créer l\'index.';
                         throw error;
                     }
                     
-                    throw firestoreError;
+                    // Autres erreurs Firebase
+                    error.type = 'FIRESTORE_ERROR';
+                    throw error;
                 }
 
                 const availableDrivers = [];
@@ -4659,8 +4657,25 @@
                 submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Recherche en cours...';
                 
                 try {
+                    console.log('🚀 Début de la recherche de véhicules...');
+                    console.log('🔍 Vérification Firebase:', {
+                        dbDefined: typeof db !== 'undefined',
+                        firebaseDefined: typeof firebase !== 'undefined',
+                        firestoreDefined: typeof firebase?.firestore !== 'undefined'
+                    });
+                    
+                    // Vérification supplémentaire de Firebase
+                    if (typeof db === 'undefined' || !db) {
+                        throw new Error('Firebase Firestore n\'est pas initialisé. Veuillez rafraîchir la page (F5).');
+                    }
+                    
                     // Rechercher les chauffeurs disponibles via Firebase
                     const drivers = await findAvailableDrivers(pickupLocation, mappedTaxiType, 10);
+                    
+                    console.log('✅ Résultat de la recherche:', {
+                        driversFound: drivers ? drivers.length : 0,
+                        drivers: drivers
+                    });
 
                     if (drivers && drivers.length > 0) {
                         
@@ -4763,33 +4778,38 @@
                     }
                 } catch (error) {
                     console.error('❌ Erreur lors de la recherche:', error);
+                    console.error('❌ Type d\'erreur:', typeof error);
+                    console.error('❌ Code d\'erreur:', error.code);
+                    console.error('❌ Message d\'erreur:', error.message);
+                    console.error('❌ Stack trace:', error.stack);
                     
                     // Message d'erreur personnalisé selon le type d'erreur
                     let errorMessage = 'Erreur lors de la recherche de véhicules.';
                     let errorDetails = '';
                     
-                    if (error.type === 'FIREBASE_NOT_INITIALIZED') {
+                    // Vérifier le code d'erreur Firebase
+                    const errorCode = error.code || error.originalError?.code || '';
+                    const errorMsg = error.message || error.originalError?.message || String(error);
+                    
+                    if (error.type === 'FIREBASE_NOT_INITIALIZED' || errorMsg.includes('Firebase n\'est pas initialisé')) {
                         errorMessage = 'Firebase n\'est pas initialisé.';
                         errorDetails = 'Veuillez rafraîchir la page (F5) et réessayer.';
-                    } else if (error.type === 'PERMISSION_DENIED') {
+                    } else if (error.type === 'PERMISSION_DENIED' || errorCode === 'permission-denied' || errorMsg.includes('permission')) {
                         errorMessage = 'Erreur de permissions Firestore.';
-                        errorDetails = 'Vérifiez les règles Firestore dans la console Firebase. Ouvrez la console (F12) pour plus de détails.';
-                    } else if (error.type === 'INDEX_REQUIRED') {
+                        errorDetails = 'Les règles Firestore bloquent l\'accès. Vérifiez les règles dans Firebase Console (Firestore Database → Règles).';
+                    } else if (error.type === 'INDEX_REQUIRED' || errorMsg.includes('index')) {
                         errorMessage = 'Index Firestore manquant.';
                         errorDetails = 'Ouvrez la console (F12) et cliquez sur le lien pour créer l\'index automatiquement.';
-                    } else if (error.code === 'permission-denied' || error.message?.includes('permission')) {
-                        errorMessage = 'Permissions Firestore insuffisantes.';
-                        errorDetails = 'Les règles Firestore bloquent l\'accès. Vérifiez les règles dans Firebase Console.';
-                    } else if (error.message?.includes('index')) {
-                        errorMessage = 'Index Firestore requis.';
-                        errorDetails = 'Ouvrez la console (F12) pour voir le lien de création d\'index.';
+                    } else if (errorMsg.includes('network') || errorMsg.includes('Network')) {
+                        errorMessage = 'Erreur de connexion réseau.';
+                        errorDetails = 'Vérifiez votre connexion internet et réessayez.';
                     } else {
                         errorMessage = 'Erreur lors de la recherche.';
-                        errorDetails = `Erreur: ${error.message || 'Erreur inconnue'}. Ouvrez la console (F12) pour plus de détails.`;
+                        errorDetails = `Erreur: ${errorMsg}. Ouvrez la console (F12) pour plus de détails.`;
                     }
                     
                     // Afficher un message d'erreur détaillé
-                    alert(`${errorMessage}\n\n${errorDetails}\n\nEn cas de problème persistant, appelez le 87 77 67 76 pour réserver.`);
+                    alert(`${errorMessage}\n\n${errorDetails}\n\nCode d'erreur: ${errorCode || 'N/A'}\n\nEn cas de problème persistant, appelez le 87 77 67 76 pour réserver.`);
                     
                     // Masquer la section véhicule sélectionné avec bouton d'appel
                     if (selectedVehicleDiv) {
@@ -5246,6 +5266,21 @@
         // Vérifier Firebase au chargement de la page
         window.addEventListener('load', () => {
             setTimeout(checkFirebaseConnection, 1000);
+        });
+        
+        // Gestionnaire d'erreurs global pour capturer les erreurs non gérées
+        window.addEventListener('error', (event) => {
+            console.error('❌ Erreur JavaScript non gérée:', event.error);
+            if (event.error && event.error.message && event.error.message.includes('Firebase') || event.error.message.includes('Firestore')) {
+                console.error('⚠️ Erreur Firebase détectée:', event.error);
+            }
+        });
+        
+        window.addEventListener('unhandledrejection', (event) => {
+            console.error('❌ Promise rejetée non gérée:', event.reason);
+            if (event.reason && (event.reason.message?.includes('Firebase') || event.reason.message?.includes('Firestore') || event.reason.code === 'permission-denied')) {
+                console.error('⚠️ Erreur Firebase dans une Promise:', event.reason);
+            }
         });
     </script>
     <script>
